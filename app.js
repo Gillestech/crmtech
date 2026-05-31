@@ -165,7 +165,7 @@ function restoreNav() {
 
 /* ---- Dashboard ------------------------------------ */
 function renderDash() {
-  document.getElementById('dash-tickets').innerHTML = tickets.slice(0,5).map(t => `
+  document.getElementById('dash-tickets').innerHTML = visibleTickets().slice(0,5).map(t => `
     <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
       <div style="flex:1;min-width:0">
         <div style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.sujet}</div>
@@ -248,9 +248,10 @@ function changeMonth(d) {
 function renderTickets() {
   const fs = document.getElementById('fs').value;
   const fp = document.getElementById('fp').value;
-  let list = tickets;
+  let list = visibleTickets();
   if (fs) list = list.filter(t => t.statut === fs);
   if (fp) list = list.filter(t => t.prio   === fp);
+  const tech = isTech();
   document.getElementById('tickets-body').innerHTML = list.map((t,i) => `
     <tr>
       <td class="mono" style="font-size:11px;color:var(--text-secondary)">${t.id}</td>
@@ -262,8 +263,8 @@ function renderTickets() {
       <td class="muted">${t.date}</td>
       <td><div class="rf">
         <button class="btn btn-sm" onclick="resolveTicket(${t._id})" title="Résoudre"><i class="ti ti-circle-check ic-action-resolve"></i></button>
-        <button class="btn btn-sm" onclick="editTicket(${t._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>
-        <button class="btn btn-sm btn-danger" onclick="deleteTicket(${t._id})" title="Supprimer"><i class="ti ti-trash-x" style="color:#f87171"></i></button>
+        ${!tech ? `<button class="btn btn-sm" onclick="editTicket(${t._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>` : ''}
+        ${!tech ? `<button class="btn btn-sm btn-danger" onclick="deleteTicket(${t._id})" title="Supprimer"><i class="ti ti-trash-x" style="color:#f87171"></i></button>` : ''}
       </div></td>
     </tr>`).join('');
 }
@@ -328,7 +329,8 @@ function deleteTicket(id) {
 
 /* ---- Dépannages ----------------------------------- */
 function renderDepannages() {
-  document.getElementById('dep-body').innerHTML = depannages.map((d,i) => `
+  const tech = isTech();
+  document.getElementById('dep-body').innerHTML = visibleDepannages().map((d,i) => `
     <tr>
       <td class="mono" style="font-size:11px;color:var(--text-secondary)">${d.id}</td>
       <td title="${d.desc}">${d.desc}</td>
@@ -340,8 +342,11 @@ function renderDepannages() {
       <td class="muted">${d.date}</td>
       <td style="font-weight:600;color:var(--green);font-size:11.5px">${d.montant ? d.montant+' FCFA' : '<span class="muted">—</span>'}</td>
       <td><div class="rf">
-        <button class="btn btn-sm" onclick="editDepannage(${d._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>
-        <button class="btn btn-sm btn-danger" onclick="deleteDepannage(${d._id})" title="Supprimer"><i class="ti ti-trash-x" style="color:#f87171"></i></button>
+        ${tech
+          ? `<button class="btn btn-sm" onclick="resolveDepannage(${d._id})" title="Marquer résolu"><i class="ti ti-circle-check ic-action-resolve"></i></button>`
+          : `<button class="btn btn-sm" onclick="editDepannage(${d._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>
+             <button class="btn btn-sm btn-danger" onclick="deleteDepannage(${d._id})" title="Supprimer"><i class="ti ti-trash-x" style="color:#f87171"></i></button>`
+        }
       </div></td>
     </tr>`).join('');
 }
@@ -397,9 +402,19 @@ function deleteDepannage(id) {
   });
 }
 
+function resolveDepannage(id) {
+  const d = depannages.find(x => x._id === id);
+  if (d && d.statut !== 'Résolu') {
+    apiFetch.put(`/depannages/${id}`, { statut:'Résolu' }).then(() => {
+      reload(renderDepannages); showNotif(`Dépannage ${d.id} résolu ✅`);
+    });
+  }
+}
+
 /* ---- Installations -------------------------------- */
 function renderInstallations() {
-  document.getElementById('installations-list').innerHTML = installations.map((inst,i) => {
+  const tech = isTech();
+  document.getElementById('installations-list').innerHTML = visibleInstallations().map((inst,i) => {
     const grad = inst.avancement === 100 ? 'linear-gradient(90deg,#11998e,#38ef7d)'
                : inst.avancement > 50    ? 'linear-gradient(90deg,#6a5af9,#3b82f6)'
                :                           'linear-gradient(90deg,#f7971e,#ffd200)';
@@ -408,8 +423,11 @@ function renderInstallations() {
         <div><div class="inst-title">${inst.titre}</div><div class="inst-ref">${inst.id}</div></div>
         <div class="rf" style="gap:6px">
           ${statBadge(inst.statut)}
-          <button class="btn btn-sm" onclick="editInstallation(${inst._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>
-          <button class="btn btn-sm btn-danger" onclick="deleteInstallation(${inst._id})" title="Supprimer"><i class="ti ti-trash-x" style="color:#f87171"></i></button>
+          ${tech
+            ? `<button class="btn btn-sm" onclick="updateAvancement(${inst._id})" title="Mettre à jour avancement"><i class="ti ti-percentage ic-action-edit"></i></button>`
+            : `<button class="btn btn-sm" onclick="editInstallation(${inst._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>
+               <button class="btn btn-sm btn-danger" onclick="deleteInstallation(${inst._id})" title="Supprimer"><i class="ti ti-trash-x" style="color:#f87171"></i></button>`
+          }
         </div>
       </div>
       <div class="inst-body">
@@ -479,6 +497,42 @@ function saveInstallation() {
 function deleteInstallation(id) {
   apiFetch.delete(`/installations/${id}`).then(() => {
     reload(renderInstallations); showNotif('Installation supprimée');
+  });
+}
+
+function updateAvancement(id) {
+  const inst = installations.find(x => x._id === id);
+  if (!inst) return;
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-hdr">
+      <div class="modal-title">Mettre à jour — ${inst.titre}</div>
+      <button class="close-btn" onclick="closeModal()"><i class="ti ti-x" style="color:#f87171"></i></button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Avancement (%)</label>
+      <input id="e-av" type="range" min="0" max="100" value="${inst.avancement}"
+        style="width:100%;accent-color:var(--accent)"
+        oninput="document.getElementById('av-val').textContent=this.value+'%'">
+      <div style="text-align:center;font-size:20px;font-weight:700;color:var(--accent);margin-top:6px" id="av-val">${inst.avancement}%</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Statut</label>
+      <select id="e-statut">${['Planifié','En cours','Résolu','Annulé'].map(s=>`<option${inst.statut===s?' selected':''}>${s}</option>`).join('')}</select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveAvancement(${id})"><i class="ti ti-device-floppy" style="color:#4ade80"></i> Enregistrer</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function saveAvancement(id) {
+  const data = {
+    avancement: parseInt(document.getElementById('e-av').value),
+    statut:     document.getElementById('e-statut').value,
+  };
+  apiFetch.put(`/installations/${id}`, data).then(() => {
+    closeModal(); reload(renderInstallations); showNotif('Avancement mis à jour ✅');
   });
 }
 
@@ -637,7 +691,8 @@ function techAvatar(t, i) {
 }
 
 function renderTechniciens() {
-  document.getElementById('tech-body').innerHTML = techniciens.map((t,i) => {
+  const tech = isTech();
+  document.getElementById('tech-body').innerHTML = visibleTechniciens().map((t,i) => {
     const sc = t.statut==='Disponible'?'b-green':t.statut==='Occupé'?'b-amber':'b-red';
     return `<tr>
       <td><div class="rf">${techAvatar(t,i)}<span>${t.nom}</span></div></td>
@@ -648,8 +703,11 @@ function renderTechniciens() {
       <td><span class="badge ${sc}">${t.statut}</span></td>
       <td class="muted">${t.tel}</td>
       <td><div class="rf">
-        <button class="btn btn-sm" onclick="editTech(${t._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>
-        <button class="btn btn-sm btn-danger" onclick="deleteTech(${t._id})" title="Supprimer"><i class="ti ti-trash-x" style="color:#f87171"></i></button>
+        ${!tech
+          ? `<button class="btn btn-sm" onclick="editTech(${t._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>
+             <button class="btn btn-sm btn-danger" onclick="deleteTech(${t._id})" title="Supprimer"><i class="ti ti-trash-x" style="color:#f87171"></i></button>`
+          : `<span class="badge b-gray" style="font-size:10px">Mon profil</span>`
+        }
       </div></td>
     </tr>`;
   }).join('');
@@ -1485,9 +1543,12 @@ async function telechargerRapport() {
 
 const AUTH_KEY  = 'crmtech_auth_v1';
 const AUTH_USERS = [
-  { login: 'admin',    password: 'admin123', nom: 'Administrateur', role: 'Administrateur', avatar: 'A' },
-  { login: 'manager',  password: 'manager1', nom: 'Manager',        role: 'Manager',        avatar: 'M' },
-  { login: 'technicien', password: 'tech123', nom: 'Technicien',    role: 'Technicien',     avatar: 'T' },
+  { login: 'admin',   password: 'admin123',  nom: 'Administrateur', role: 'Administrateur', avatar: 'A',  techNom: null },
+  { login: 'manager', password: 'manager1',  nom: 'Manager',        role: 'Manager',        avatar: 'MG', techNom: null },
+  { login: 'karim',   password: 'karim123',  nom: 'Karim Diallo',   role: 'Technicien',     avatar: 'KD', techNom: 'Karim Diallo'  },
+  { login: 'sophie',  password: 'sophie123', nom: 'Sophie Martin',  role: 'Technicien',     avatar: 'SM', techNom: 'Sophie Martin' },
+  { login: 'luc',     password: 'luc123',    nom: 'Luc Bernard',    role: 'Technicien',     avatar: 'LB', techNom: 'Luc Bernard'   },
+  { login: 'amara',   password: 'amara123',  nom: 'Amara Koné',     role: 'Technicien',     avatar: 'AK', techNom: 'Amara Koné'    },
 ];
 
 function getSession() {
@@ -1495,9 +1556,43 @@ function getSession() {
 }
 
 function saveSession(user, remember) {
-  const data = { login: user.login, nom: user.nom, role: user.role, avatar: user.avatar };
+  const data = { login: user.login, nom: user.nom, role: user.role, avatar: user.avatar, techNom: user.techNom || null };
   localStorage.setItem(AUTH_KEY, JSON.stringify(data));
   if (remember) sessionStorage.setItem(AUTH_KEY, 'keep');
+}
+
+/* ---- Helpers RBAC --------------------------------- */
+function isTech()   { const s = getSession(); return s?.role === 'Technicien'; }
+function isAdmin()  { const s = getSession(); return s?.role !== 'Technicien'; }
+function myTechNom(){ return getSession()?.techNom || null; }
+
+function visibleTickets()       { return isTech() ? tickets.filter(t      => t.tech    === myTechNom()) : tickets;       }
+function visibleDepannages()    { return isTech() ? depannages.filter(d   => d.tech    === myTechNom()) : depannages;    }
+function visibleInstallations() { return isTech() ? installations.filter(i => i.tech   === myTechNom()) : installations; }
+function visibleTechniciens()   { return isTech() ? techniciens.filter(t  => t.nom     === myTechNom()) : techniciens;   }
+
+function applyRoleUI() {
+  const tech = isTech();
+  // Masquer items admin dans la sidebar
+  document.querySelectorAll('[data-admin]').forEach(el => {
+    el.style.display = tech ? 'none' : '';
+  });
+  // Masquer boutons de création dans les topbars
+  document.querySelectorAll('.admin-action').forEach(el => {
+    el.style.display = tech ? 'none' : '';
+  });
+  // Badge rôle sidebar
+  const roleEl = document.getElementById('sidebar-user-role');
+  const s = getSession();
+  if (roleEl && s) roleEl.textContent = s.role;
+  // Si technicien sur une page interdite, rediriger
+  if (tech) {
+    const forbidden = ['contrats','clients','statistiques','export'];
+    const cur = localStorage.getItem('crmtech_page') || 'dashboard';
+    if (forbidden.includes(cur)) {
+      localStorage.setItem('crmtech_page','dashboard');
+    }
+  }
 }
 
 function clearSession() {
@@ -1505,9 +1600,9 @@ function clearSession() {
   sessionStorage.removeItem(AUTH_KEY);
 }
 
-function fillDemo() {
-  document.getElementById('login-email').value    = 'admin';
-  document.getElementById('login-password').value = 'admin123';
+function fillDemo(login = 'admin', password = 'admin123') {
+  document.getElementById('login-email').value    = login;
+  document.getElementById('login-password').value = password;
   document.getElementById('login-email').focus();
 }
 
@@ -1600,15 +1695,19 @@ function handleLogout() {
 }
 
 function updateSidebarUser(user) {
-  const el = document.getElementById('sidebar-user-name');
-  const av = document.getElementById('sidebar-user-avatar');
-  if (el) el.textContent = user.nom;
-  if (av) { av.textContent = user.avatar; }
+  const el   = document.getElementById('sidebar-user-name');
+  const av   = document.getElementById('sidebar-user-avatar');
+  const role = document.getElementById('sidebar-user-role');
+  if (el)   el.textContent   = user.nom;
+  if (av)   av.textContent   = user.avatar;
+  if (role) role.textContent = user.role;
+  applyRoleUI();
 }
 
 /* ---- Init ----------------------------------------- */
 async function initApp() {
   applyParametresOnLoad();
+  applyRoleUI();
 
   // 1. Affichage instantané avec le cache local (si disponible)
   const hasCacheData = loadCache();
