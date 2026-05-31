@@ -1479,8 +1479,135 @@ async function telechargerRapport() {
   }
 }
 
+/* =====================================================
+   AUTHENTIFICATION
+   ===================================================== */
+
+const AUTH_KEY  = 'crmtech_auth_v1';
+const AUTH_USERS = [
+  { login: 'admin',    password: 'admin123', nom: 'Administrateur', role: 'Administrateur', avatar: 'A' },
+  { login: 'manager',  password: 'manager1', nom: 'Manager',        role: 'Manager',        avatar: 'M' },
+  { login: 'technicien', password: 'tech123', nom: 'Technicien',    role: 'Technicien',     avatar: 'T' },
+];
+
+function getSession() {
+  try { return JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); } catch(_) { return null; }
+}
+
+function saveSession(user, remember) {
+  const data = { login: user.login, nom: user.nom, role: user.role, avatar: user.avatar };
+  localStorage.setItem(AUTH_KEY, JSON.stringify(data));
+  if (remember) sessionStorage.setItem(AUTH_KEY, 'keep');
+}
+
+function clearSession() {
+  localStorage.removeItem(AUTH_KEY);
+  sessionStorage.removeItem(AUTH_KEY);
+}
+
+function fillDemo() {
+  document.getElementById('login-email').value    = 'admin';
+  document.getElementById('login-password').value = 'admin123';
+  document.getElementById('login-email').focus();
+}
+
+function togglePassword(btn) {
+  const input = btn.closest('.login-input-wrap').querySelector('input');
+  const icon  = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.className = 'ti ti-eye-off';
+  } else {
+    input.type = 'password';
+    icon.className = 'ti ti-eye';
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  document.getElementById('login-error-msg').textContent = msg;
+  el.style.display = 'flex';
+  // Shake animation
+  const card = document.querySelector('.login-card');
+  card.style.animation = 'none';
+  card.offsetHeight;
+  card.style.animation = 'loginShake .4s ease';
+}
+
+function setLoginLoading(on) {
+  const btn  = document.getElementById('login-submit');
+  const text = btn.querySelector('.login-btn-text');
+  const icon = btn.querySelector('.ti-arrow-right');
+  const loader = btn.querySelector('.login-btn-loader');
+  btn.disabled = on;
+  text.textContent = on ? 'Connexion…' : 'Se connecter';
+  if (icon)   icon.style.display   = on ? 'none' : '';
+  if (loader) loader.style.display = on ? '' : 'none';
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const login    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const remember = document.getElementById('login-remember').checked;
+
+  document.getElementById('login-error').style.display = 'none';
+
+  if (!login || !password) {
+    showLoginError('Veuillez remplir tous les champs.');
+    return;
+  }
+
+  setLoginLoading(true);
+  // Simulation délai réseau (UX)
+  await new Promise(r => setTimeout(r, 600));
+
+  const user = AUTH_USERS.find(u => u.login === login && u.password === password);
+
+  if (!user) {
+    setLoginLoading(false);
+    showLoginError('Identifiant ou mot de passe incorrect.');
+    document.getElementById('login-password').value = '';
+    document.getElementById('login-password').focus();
+    return;
+  }
+
+  saveSession(user, remember);
+  updateSidebarUser(user);
+  setLoginLoading(false);
+
+  // Transition vers l'app
+  const screen = document.getElementById('login-screen');
+  screen.style.transition = 'opacity .5s ease';
+  screen.style.opacity = '0';
+  setTimeout(() => {
+    screen.classList.add('hidden');
+    initApp();
+  }, 500);
+}
+
+function handleLogout() {
+  clearSession();
+  // Réinitialiser le formulaire
+  document.getElementById('login-form').reset();
+  document.getElementById('login-error').style.display = 'none';
+  // Ré-afficher l'écran de connexion
+  const screen = document.getElementById('login-screen');
+  screen.style.opacity = '0';
+  screen.classList.remove('hidden');
+  screen.style.transition = 'opacity .4s ease';
+  requestAnimationFrame(() => { screen.style.opacity = '1'; });
+}
+
+function updateSidebarUser(user) {
+  const el = document.getElementById('sidebar-user-name');
+  const av = document.getElementById('sidebar-user-avatar');
+  if (el) el.textContent = user.nom;
+  if (av) { av.textContent = user.avatar; }
+}
+
 /* ---- Init ----------------------------------------- */
-document.addEventListener('DOMContentLoaded', async () => {
+async function initApp() {
   applyParametresOnLoad();
 
   // 1. Affichage instantané avec le cache local (si disponible)
@@ -1515,4 +1642,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('rapport-overlay').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeRapportModal();
   });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const session = getSession();
+  if (session) {
+    // Session existante → accès direct
+    updateSidebarUser(session);
+    document.getElementById('login-screen').classList.add('hidden');
+    initApp();
+  }
+  // Sinon → l'écran de connexion est déjà visible (HTML par défaut)
 });

@@ -14,6 +14,86 @@
   <script src="app.js" defer></script>
 </head>
 <body>
+
+<!-- ===================== PAGE DE CONNEXION ===================== -->
+<div id="login-screen" class="login-screen">
+  <div class="login-bg">
+    <div class="login-blob login-blob-1"></div>
+    <div class="login-blob login-blob-2"></div>
+    <div class="login-blob login-blob-3"></div>
+  </div>
+
+  <div class="login-card">
+    <!-- Logo -->
+    <div class="login-logo">
+      <div class="login-logo-icon"><i class="ti ti-cpu-2"></i></div>
+      <div>
+        <div class="login-logo-title">TechCRM</div>
+        <div class="login-logo-sub">Service Technique</div>
+      </div>
+    </div>
+
+    <div class="login-heading">
+      <h1>Bon retour 👋</h1>
+      <p>Connectez-vous à votre espace de travail</p>
+    </div>
+
+    <!-- Alertes -->
+    <div id="login-error" class="login-alert login-alert-error" style="display:none">
+      <i class="ti ti-alert-circle"></i>
+      <span id="login-error-msg">Identifiants incorrects</span>
+    </div>
+
+    <!-- Formulaire -->
+    <form id="login-form" class="login-form" onsubmit="handleLogin(event)">
+
+      <div class="login-field">
+        <label for="login-email">Identifiant</label>
+        <div class="login-input-wrap">
+          <i class="ti ti-user"></i>
+          <input id="login-email" type="text" placeholder="admin" autocomplete="username" />
+        </div>
+      </div>
+
+      <div class="login-field">
+        <label for="login-password">Mot de passe</label>
+        <div class="login-input-wrap">
+          <i class="ti ti-lock"></i>
+          <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+          <button type="button" class="login-toggle-pw" onclick="togglePassword(this)" tabindex="-1">
+            <i class="ti ti-eye"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="login-options">
+        <label class="login-remember">
+          <input type="checkbox" id="login-remember" />
+          <span class="login-checkmark"></span>
+          Se souvenir de moi
+        </label>
+        <span class="login-forgot">Mot de passe oublié ?</span>
+      </div>
+
+      <button type="submit" class="login-btn" id="login-submit">
+        <span class="login-btn-text">Se connecter</span>
+        <i class="ti ti-arrow-right"></i>
+        <span class="login-btn-loader" style="display:none"><i class="ti ti-loader-2"></i></span>
+      </button>
+
+    </form>
+
+    <!-- Compte démo -->
+    <div class="login-demo">
+      <span>Compte démo :</span>
+      <code onclick="fillDemo()">admin / admin123</code>
+    </div>
+
+    <div class="login-footer">TechCRM v1.0 — Laravel 13 + MySQL</div>
+  </div>
+</div>
+<!-- ============================================================= -->
+
 <div class="app">
 
   <!-- SIDEBAR -->
@@ -40,7 +120,15 @@
     <div class="nav-item" onclick="nav('historique',this)"><i class="ti ti-history ic-slate"></i>Historique</div>
     <div class="nav-item" onclick="nav('export',this)"><i class="ti ti-file-arrow-right ic-amber"></i>Export PDF</div>
     <div class="sidebar-footer">
+      <div class="sidebar-user" id="sidebar-user">
+        <div class="sidebar-user-avatar" id="sidebar-user-avatar">A</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-user-name">Admin</div>
+          <div class="sidebar-user-role">Administrateur</div>
+        </div>
+      </div>
       <div class="nav-item" onclick="nav('parametres',this)"><i class="ti ti-settings-2 ic-gray"></i>Paramètres</div>
+      <div class="nav-item nav-logout" onclick="handleLogout()"><i class="ti ti-logout ic-red"></i>Déconnexion</div>
     </div>
   </aside>
 
