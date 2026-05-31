@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TechCRM — Service Technique</title>
+  <link rel="stylesheet" href="libs/google-fonts.css" />
+  <link rel="stylesheet" href="libs/tabler-icons.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="libs/chart.min.js" defer></script>
+  <script src="libs/jspdf.min.js"></script>
+  <script src="libs/jspdf.autotable.min.js"></script>
+  <script src="libs/xlsx.full.min.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo-wrap">
+      <div class="logo-row">
+        <div class="logo-icon"><i class="ti ti-cpu-2"></i></div>
+        <div><div class="logo-title">TechCRM</div><div class="logo-sub">Service Technique</div></div>
+      </div>
+    </div>
+    <div class="nav-section">Tableau de bord</div>
+    <div class="nav-item active" onclick="nav('dashboard',this)"><i class="ti ti-layout-dashboard ic-purple"></i>Vue d'ensemble</div>
+    <div class="nav-item" onclick="nav('calendrier',this)"><i class="ti ti-calendar-event ic-sky"></i>Calendrier<span class="nav-badge">3</span></div>
+    <div class="nav-section">Opérations</div>
+    <div class="nav-item" onclick="nav('tickets',this)"><i class="ti ti-ticket ic-orange"></i>Tickets<span class="nav-badge">12</span></div>
+    <div class="nav-item" onclick="nav('depannages',this)"><i class="ti ti-bolt ic-red"></i>Dépannages</div>
+    <div class="nav-item" onclick="nav('installations',this)"><i class="ti ti-crane ic-green"></i>Installations</div>
+    <div class="nav-section">Gestion</div>
+    <div class="nav-item" onclick="nav('contrats',this)"><i class="ti ti-file-check ic-yellow"></i>Contrats maint.</div>
+    <div class="nav-item" onclick="nav('clients',this)"><i class="ti ti-building-community ic-violet"></i>Clients</div>
+    <div class="nav-item" onclick="nav('techniciens',this)"><i class="ti ti-user-cog ic-cyan"></i>Techniciens</div>
+    <div class="nav-section">Analyse</div>
+    <div class="nav-item" onclick="nav('statistiques',this)"><i class="ti ti-chart-histogram ic-blue"></i>Statistiques</div>
+    <div class="nav-item" onclick="nav('historique',this)"><i class="ti ti-history ic-slate"></i>Historique</div>
+    <div class="nav-item" onclick="nav('export',this)"><i class="ti ti-file-arrow-right ic-amber"></i>Export PDF</div>
+    <div class="sidebar-footer">
+      <div class="nav-item" onclick="nav('parametres',this)"><i class="ti ti-settings-2 ic-gray"></i>Paramètres</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div id="panel-dashboard" class="panel active">
+      <div class="topbar">
+        <div class="topbar-left"><div class="topbar-title">Vue d'ensemble</div></div>
+        <div class="topbar-right">
+          <div class="search-bar"><i class="ti ti-search ic-slate"></i>Rechercher…</div>
+          <button class="btn btn-primary" onclick="openModal('ticket')"><i class="ti ti-plus" style="color:#4ade80"></i>Nouveau ticket</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="metrics">
+          <div class="metric metric-blue">
+            <div class="metric-label">Tickets ouverts</div>
+            <div class="metric-val">12</div>
+            <div class="metric-sub">▲ 3 cette semaine</div>
+          </div>
+          <div class="metric metric-pink">
+            <div class="metric-label">Dépannages actifs</div>
+            <div class="metric-val">5</div>
+            <div class="metric-sub">2 urgents</div>
+          </div>
+          <div class="metric metric-teal">
+            <div class="metric-label">Contrats actifs</div>
+            <div class="metric-val">18</div>
+            <div class="metric-sub">3 expirent ce mois</div>
+          </div>
+          <div class="metric metric-orange">
+            <div class="metric-label">Délai moyen</div>
+            <div class="metric-val">2.4h</div>
+            <div class="metric-sub">Objectif : &lt;3h ✓</div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="card"><div class="card-title">Tickets récents</div><div id="dash-tickets"></div></div>
+          <div class="card"><div class="card-title">Interventions du jour</div><div id="dash-agenda"></div></div>
+        </div>
+        <div class="two-col">
+          <div class="card"><div class="card-title">Charge techniciens</div><div id="dash-techload"></div></div>
+          <div class="card"><div class="card-title">Contrats expirant bientôt</div><div id="dash-contrats"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALENDRIER -->
+    <div id="panel-calendrier" class="panel">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="btn" onclick="changeMonth(-1)"><i class="ti ti-chevron-left ic-sky"></i></button>
+          <div class="topbar-title" id="cal-month-title">Mai 2026</div>
+          <button class="btn" onclick="changeMonth(1)"><i class="ti ti-chevron-right ic-sky"></i></button>
+        </div>
+        <div class="topbar-right">
+          <button class="btn btn-primary" onclick="openModal('intervention')"><i class="ti ti-plus" style="color:#4ade80"></i>Intervention</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="cal-legend">
+          <div class="cal-legend-item"><span class="cal-legend-dot" style="background:#6a5af9"></span>Ticket</div>
+          <div class="cal-legend-item"><span class="cal-legend-dot" style="background:#38ef7d"></span>Installation</div>
+          <div class="cal-legend-item"><span class="cal-legend-dot" style="background:#ffd200"></span>Maintenance</div>
+          <div class="cal-legend-item"><span class="cal-legend-dot" style="background:#ff4f6d"></span>Dépannage</div>
+        </div>
+        <div class="cal-grid" id="cal-names"></div>
+        <div class="cal-grid" id="cal-body"></div>
+      </div>
+    </div>
+
+    <!-- TICKETS -->
+    <div id="panel-tickets" class="panel">
+      <div class="topbar">
+        <div class="topbar-left"><div class="topbar-title">Tickets</div></div>
+        <div class="topbar-right">
+          <select id="fs" onchange="renderTickets()"><option value="">Tous statuts</option><option>Ouvert</option><option>En cours</option><option>Résolu</option></select>
+          <select id="fp" onchange="renderTickets()"><option value="">Toutes priorités</option><option>Urgent</option><option>Haute</option><option>Normale</option><option>Basse</option></select>
+          <button class="btn btn-primary" onclick="openModal('ticket')"><i class="ti ti-plus" style="color:#4ade80"></i>Nouveau</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="card card-overflow">
+          <table>
+            <thead><tr><th style="width:75px">#</th><th style="width:175px">Sujet</th><th style="width:110px">Client</th><th style="width:100px">Technicien</th><th style="width:70px">Priorité</th><th style="width:75px">Statut</th><th style="width:60px">Date</th><th style="width:80px">Actions</th></tr></thead>
+            <tbody id="tickets-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- DÉPANNAGES -->
+    <div id="panel-depannages" class="panel">
+      <div class="topbar">
+        <div class="topbar-left"><div class="topbar-title">Dépannages</div></div>
+        <div class="topbar-right"><button class="btn btn-primary" onclick="openModal('depannage')"><i class="ti ti-plus" style="color:#4ade80"></i>Nouveau</button></div>
+      </div>
+      <div class="content">
+        <div class="three-col">
+          <div class="metric metric-pink"><div class="metric-label">En cours</div><div class="metric-val">5</div></div>
+          <div class="metric metric-blue"><div class="metric-label">Résolus ce mois</div><div class="metric-val">23</div></div>
+          <div class="metric metric-teal"><div class="metric-label">Délai moyen</div><div class="metric-val">1.8h</div></div>
+        </div>
+        <div class="card card-overflow">
+          <table>
+            <thead><tr><th style="width:75px">Réf.</th><th style="width:155px">Description</th><th style="width:90px">Client</th><th style="width:110px">Équipement</th><th style="width:85px">Technicien</th><th style="width:65px">Priorité</th><th style="width:65px">Statut</th><th style="width:55px">Date</th><th style="width:100px">Montant</th><th style="width:80px">Actions</th></tr></thead>
+            <tbody id="dep-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- INSTALLATIONS -->
+    <div id="panel-installations" class="panel">
+      <div class="topbar">
+        <div class="topbar-left"><div class="topbar-title">Installations</div></div>
+        <div class="topbar-right"><button class="btn btn-primary" onclick="openModal('installation')"><i class="ti ti-plus" style="color:#4ade80"></i>Nouvelle</button></div>
+      </div>
+      <div class="content"><div id="installations-list"></div></div>
+    </div>
+
+    <!-- CONTRATS -->
+    <div id="panel-contrats" class="panel">
+      <div class="topbar">
+        <div class="topbar-left"><div class="topbar-title">Contrats de maintenance</div></div>
+        <div class="topbar-right"><button class="btn btn-primary" onclick="openModal('contrat')"><i class="ti ti-plus" style="color:#4ade80"></i>Nouveau contrat</button></div>
+      </div>
+      <div class="content">
+        <div class="tab-bar">
+          <div class="tab active" onclick="setContratTab(this,'all')">Tous</div>
+          <div class="tab" onclick="setContratTab(this,'actif')">Actifs</div>
+          <div class="tab" onclick="setContratTab(this,'expire')">Expirés</div>
+        </div>
+        <div id="contrats-list"></div>
+      </div>
+    </div>
+
+    <!-- CLIENTS -->
+    <div id="panel-clients" class="panel">
+      <div class="topbar">
+        <div class="topbar-left"><div class="topbar-title">Clients</div></div>
+        <div class="topbar-right"><button class="btn btn-primary" onclick="openModal('client')"><i class="ti ti-plus" style="color:#4ade80"></i>Nouveau client</button></div>
+      </div>
+      <div class="content">
+        <div class="card card-overflow">
+          <table>
+            <thead><tr><th style="width:150px">Client</th><th style="width:80px">Secteur</th><th style="width:110px">Contact</th><th style="width:160px">Email</th><th style="width:60px">Tickets</th><th style="width:70px">Contrat</th><th style="width:90px">Ville</th><th style="width:80px">Actions</th></tr></thead>
+            <tbody id="clients-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TECHNICIENS -->
+    <div id="panel-techniciens" class="panel">
+      <div class="topbar">
+        <div class="topbar-left"><div class="topbar-title">Techniciens</div></div>
+        <div class="topbar-right"><button class="btn btn-primary" onclick="openModal('technicien')"><i class="ti ti-plus" style="color:#4ade80"></i>Ajouter</button></div>
+      </div>
+      <div class="content">
+        <div class="card card-overflow">
+          <table>
+            <thead><tr><th style="width:140px">Technicien</th><th style="width:150px">Poste occupé</th><th style="width:70px">Actifs</th><th style="width:70px">Résolus</th><th style="width:110px">Disponibilité</th><th style="width:110px">Statut</th><th style="width:120px">Tél.</th><th style="width:80px">Actions</th></tr></thead>
+            <tbody id="tech-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATISTIQUES -->
+    <div id="panel-statistiques" class="panel">
+      <div class="topbar">
+        <div class="topbar-left"><div class="topbar-title">Statistiques &amp; Analyse</div></div>
+        <div class="topbar-right">
+          <select id="stat-period" onchange="renderStats()">
+            <option value="6">6 derniers mois</option>
+            <option value="12">12 derniers mois</option>
+            <option value="3">3 derniers mois</option>
+          </select>
+        </div>
+      </div>
+      <div class="content">
+        <div class="metrics">
+          <div class="metric metric-blue"><div class="metric-label">Tickets résolus</div><div class="metric-val">247</div><div class="metric-sub">▲ 12%</div></div>
+          <div class="metric metric-teal"><div class="metric-label">Taux résolution</div><div class="metric-val">94%</div><div class="metric-sub">▲ 2 pts</div></div>
+          <div class="metric metric-pink"><div class="metric-label">Satisfaction</div><div class="metric-val">4.6/5</div><div class="metric-sub">38 avis</div></div>
+          <div class="metric metric-orange"><div class="metric-label">CA contrats</div><div class="metric-val">14.2M</div><div class="metric-sub">FCFA ce mois</div></div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">Tickets par mois</div>
+            <div class="chart-wrap chart-wrap-180"><canvas id="chart-tickets" role="img" aria-label="Tickets par mois">Données tickets mensuels</canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Répartition par catégorie</div>
+            <div class="chart-legend">
+              <div class="chart-legend-item"><span class="chart-legend-dot" style="background:#6a5af9"></span>Matériel</div>
+              <div class="chart-legend-item"><span class="chart-legend-dot" style="background:#38ef7d"></span>Logiciel</div>
+              <div class="chart-legend-item"><span class="chart-legend-dot" style="background:#ffd200"></span>Réseau</div>
+              <div class="chart-legend-item"><span class="chart-legend-dot" style="background:#ff4f6d"></span>Électrique</div>
+            </div>
+            <div class="chart-wrap chart-wrap-160"><canvas id="chart-cat" role="img" aria-label="Répartition catégories">Matériel 42%, Logiciel 27%, Réseau 18%, Électrique 13%</canvas></div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">Performance techniciens</div>
+            <div class="chart-wrap chart-wrap-160"><canvas id="chart-tech" role="img" aria-label="Performance techniciens">Performance par technicien</canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Évolution délai moyen (h)</div>
+            <div class="chart-wrap chart-wrap-160"><canvas id="chart-delai" role="img" aria-label="Délai moyen">Évolution délai</canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORIQUE -->
+    <div id="panel-historique" class="panel">
+      <div class="topbar">
+        <div class="topbar-left"><div class="topbar-title">Historique des activités</div></div>
+        <div class="topbar-right">
+          <select id="hist-filter" onchange="renderHistorique()">
+            <option value="">Toutes activités</option>
+            <option value="ticket">Tickets</option>
+            <option value="contrat">Contrats</option>
+            <option value="install">Installations</option>
+            <option value="dep">Dépannages</option>
+          </select>
+        </div>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="card-title">Journal des événements <span style="font-size:11px;color:var(--text-muted);font-weight:400">30 derniers jours</span></div>
+          <div id="hist-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPORT -->
+    <div id="panel-export" class="panel">
+      <div class="topbar"><div class="topbar-left"><div class="topbar-title">Export PDF</div></div></div>
+      <div class="content">
+        <!-- Exports rapides -->
+        <div class="card">
+          <div class="card-title">Exports rapides</div>
+          <div id="export-list"></div>
+        </div>
+        <!-- Rapport personnalisé -->
+        <div class="card">
+          <div class="card-title">Rapport personnalisé</div>
+          <div class="fg2" style="margin-bottom:16px">
+            <div class="form-group"><label class="form-label">Type de rapport</label>
+              <select id="exp-type">
+                <option value="tickets">Tickets</option>
+                <option value="depannages">Dépannages</option>
+                <option value="contrats">Contrats</option>
+                <option value="installations">Installations</option>
+                <option value="techniciens">Techniciens</option>
+                <option value="global">Rapport global</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">Client (optionnel)</label>
+              <select id="exp-client"><option value="">Tous les clients</option></select>
+            </div>
+            <div class="form-group"><label class="form-label">Statut (optionnel)</label>
+              <select id="exp-statut"><option value="">Tous</option></select>
+            </div>
+          </div>
+          <div class="rf" style="gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="genererExport('pdf')"><i class="ti ti-file-type-pdf" style="color:#f87171"></i> PDF</button>
+            <button class="btn btn-primary" onclick="genererExport('excel')"><i class="ti ti-file-type-xls" style="color:#4ade80"></i> Excel</button>
+            <button class="btn btn-primary" onclick="genererExport('word')"><i class="ti ti-file-type-doc" style="color:#60a5fa"></i> Word</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARAMÈTRES -->
+    <div id="panel-parametres" class="panel">
+      <div class="topbar">
+        <div class="topbar-left"><div class="topbar-title">Paramètres</div></div>
+        <div class="topbar-right"><button class="btn btn-primary" onclick="saveParametres()"><i class="ti ti-device-floppy" style="color:#4ade80"></i> Enregistrer</button></div>
+      </div>
+      <div class="content">
+
+        <!-- Informations société -->
+        <div class="card">
+          <div class="card-title"><i class="ti ti-building ic-violet" style="margin-right:8px"></i>Informations de la société</div>
+          <div class="fg2">
+            <div class="form-group"><label class="form-label">Nom de la société</label><input id="p-societe" type="text" class="param-input" placeholder="Ex: GroupAMK"></div>
+            <div class="form-group"><label class="form-label">Secteur d'activité</label><input id="p-secteur" type="text" class="param-input" placeholder="Ex: Informatique & Télécom"></div>
+          </div>
+          <div class="fg2">
+            <div class="form-group"><label class="form-label">Email professionnel</label><input id="p-email" type="email" class="param-input" placeholder="contact@societe.com"></div>
+            <div class="form-group"><label class="form-label">Téléphone</label><input id="p-tel" type="tel" class="param-input" placeholder="+225 00 00 00 00"></div>
+          </div>
+          <div class="form-group"><label class="form-label">Adresse</label><input id="p-adresse" type="text" class="param-input" placeholder="Rue, Ville, Pays"></div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="card">
+          <div class="card-title"><i class="ti ti-bell ic-amber" style="margin-right:8px"></i>Notifications par email</div>
+          <div class="param-row">
+            <div>
+              <div class="param-label">Rappels contrats de maintenance</div>
+              <div class="param-desc">Envoyer un email avant chaque visite prévue</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="p-notif-contrats" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="param-row" style="margin-top:12px">
+            <div>
+              <div class="param-label">Délai de rappel</div>
+              <div class="param-desc">Combien de jours avant la visite</div>
+            </div>
+            <select id="p-delai-rappel" class="param-input" style="width:120px">
+              <option value="3">3 jours</option>
+              <option value="5">5 jours</option>
+              <option value="7" selected>7 jours</option>
+              <option value="14">14 jours</option>
+              <option value="30">30 jours</option>
+            </select>
+          </div>
+          <div class="param-row" style="margin-top:12px">
+            <div>
+              <div class="param-label">Email destinataire</div>
+              <div class="param-desc">Adresse de réception des rappels</div>
+            </div>
+            <input id="p-email-notif" type="email" class="param-input" style="width:240px" placeholder="e.kouame@groupamk.com">
+          </div>
+        </div>
+
+        <!-- Apparence -->
+        <div class="card">
+          <div class="card-title"><i class="ti ti-palette ic-sky" style="margin-right:8px"></i>Apparence</div>
+          <div class="param-row">
+            <div>
+              <div class="param-label">Couleur d'accent</div>
+              <div class="param-desc">Couleur principale de l'interface</div>
+            </div>
+            <div class="rf" style="gap:8px">
+              <div class="color-dot active" style="background:#6a5af9" onclick="setAccent('#6a5af9',this)" title="Violet"></div>
+              <div class="color-dot" style="background:#3b82f6" onclick="setAccent('#3b82f6',this)" title="Bleu"></div>
+              <div class="color-dot" style="background:#10b981" onclick="setAccent('#10b981',this)" title="Vert"></div>
+              <div class="color-dot" style="background:#f59e0b" onclick="setAccent('#f59e0b',this)" title="Amber"></div>
+              <div class="color-dot" style="background:#ef4444" onclick="setAccent('#ef4444',this)" title="Rouge"></div>
+              <div class="color-dot" style="background:#ec4899" onclick="setAccent('#ec4899',this)" title="Rose"></div>
+            </div>
+          </div>
+          <div class="param-row" style="margin-top:12px">
+            <div>
+              <div class="param-label">Nom affiché dans l'interface</div>
+              <div class="param-desc">Remplace "TechCRM" dans la sidebar</div>
+            </div>
+            <input id="p-appname" type="text" class="param-input" style="width:160px" placeholder="TechCRM">
+          </div>
+        </div>
+
+        <!-- Informations système -->
+        <div class="card">
+          <div class="card-title"><i class="ti ti-info-circle ic-slate" style="margin-right:8px"></i>Informations système</div>
+          <div class="param-row"><div class="param-label">Version</div><div class="param-desc">TechCRM v1.0 — Laravel 13 + MySQL</div></div>
+          <div class="param-row" style="margin-top:8px"><div class="param-label">API</div><div class="param-desc" id="p-api-status">Vérification…</div></div>
+          <div class="param-row" style="margin-top:8px"><div class="param-label">Base de données</div><div class="param-desc" id="p-db-status">Vérification…</div></div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" class="modal-overlay">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- MODAL RAPPORT IA -->
+<div id="rapport-overlay" class="modal-overlay" style="display:none;z-index:2000">
+  <div class="modal" id="rapport-modal" style="max-width:780px;width:96%">
+    <div class="modal-header">
+      <span><i class="ti ti-file-description ic-violet" style="margin-right:8px"></i>Rédaction du rapport de visite</span>
+      <button class="modal-close" onclick="closeRapportModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Étape 1 : Saisie des infos -->
+      <div id="rapport-step1">
+        <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">
+          Renseignez les informations de la visite. L'IA <strong>Mistral</strong> rédigera le rapport professionnel pour vous.
+        </p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Équipements vérifiés <span style="color:#f87171">*</span></label>
+            <textarea id="rap-equipements" rows="3" class="form-control" placeholder="Ex: Climatiseurs split, tableau électrique, onduleur, câblage réseau…"></textarea>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Interventions réalisées <span style="color:#f87171">*</span></label>
+            <textarea id="rap-interventions" rows="3" class="form-control" placeholder="Ex: Nettoyage des filtres, vérification des niveaux, tests de fonctionnement…"></textarea>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Problèmes constatés</label>
+            <textarea id="rap-problemes" rows="2" class="form-control" placeholder="Ex: Fuite de fluide frigorigène sur unité 2, condensateur à remplacer… (laisser vide si aucun)"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Recommandations</label>
+            <textarea id="rap-recommandations" rows="2" class="form-control" placeholder="Ex: Remplacement préventif des filtres dans 3 mois…"></textarea>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="max-width:200px">
+            <label>État général <span style="color:#f87171">*</span></label>
+            <select id="rap-etat" class="form-control">
+              <option value="Bon">✅ Bon</option>
+              <option value="Correct" selected>🟡 Correct</option>
+              <option value="Dégradé">🟠 Dégradé</option>
+              <option value="Critique">🔴 Critique</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Technicien intervenant</label>
+            <input type="text" id="rap-technicien" class="form-control" placeholder="Nom du technicien" />
+          </div>
+        </div>
+        <div id="rapport-error" style="color:#f87171;font-size:13px;display:none;margin-top:8px"></div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeRapportModal()">Annuler</button>
+          <button class="btn btn-primary" id="btn-generer" onclick="genererRapport()">
+            <i class="ti ti-sparkles ic-violet"></i> Générer le rapport avec l'IA
+          </button>
+        </div>
+      </div>
+
+      <!-- Étape 2 : Rapport généré -->
+      <div id="rapport-step2" style="display:none">
+        <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">
+          Rapport généré par <strong>Mistral</strong>. Vous pouvez le modifier avant de télécharger.
+        </p>
+        <textarea id="rap-result" rows="18" class="form-control" style="font-family:monospace;font-size:12.5px;line-height:1.6"></textarea>
+        <div class="modal-footer" style="margin-top:12px">
+          <button class="btn" onclick="showRapportStep1()"><i class="ti ti-arrow-left"></i> Modifier les infos</button>
+          <button class="btn btn-primary" onclick="telechargerRapport()">
+            <i class="ti ti-file-word ic-sky"></i> Télécharger en Word
+          </button>
+        </div>
+      </div>
+
+      <!-- Étape loading -->
+      <div id="rapport-loading" style="display:none;text-align:center;padding:48px 0">
+        <div class="spinner" style="margin:0 auto 16px"></div>
+        <p style="color:var(--text-muted)">Mistral rédige votre rapport…</p>
+        <p style="color:var(--text-muted);font-size:12px">Cela peut prendre 15 à 30 secondes</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- INDICATEUR RAFRAÎCHISSEMENT -->
+<div id="refresh-indicator" style="position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#6a5af9,#38bdf8,#6a5af9);background-size:200% 100%;animation:refresh-slide 1.2s linear infinite;opacity:0;transition:opacity .3s;z-index:9999;pointer-events:none"></div>
+
+<!-- TOAST -->
+<div class="notif" id="notif"><i class="ti ti-circle-check" style="color:#4ade80;font-size:16px"></i><span id="notif-msg"></span></div>
+
+</body>
+</html>

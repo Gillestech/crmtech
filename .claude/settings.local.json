@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php --version)",
+      "Bash(composer --version)",
+      "PowerShell(php --version)",
+      "PowerShell(composer --version)",
+      "PowerShell($php = \"C:\\\\laragon\\\\bin\\\\php\\\\php-8.3.30-Win32-vs16-x64\\\\php.exe\"; $mysql = \"C:\\\\laragon\\\\bin\\\\mysql\\\\mysql-8.4.3-winx64\\\\bin\\\\mysql.exe\"; $composer = \"C:\\\\laragon\\\\bin\\\\composer\\\\composer.bat\"; & $php --version; & $composer --version; & $mysql --version)",
+      "PowerShell($env:Path = \"C:\\\\laragon\\\\bin\\\\php\\\\php-8.3.30-Win32-vs16-x64;C:\\\\laragon\\\\bin\\\\mysql\\\\mysql-8.4.3-winx64\\\\bin;C:\\\\laragon\\\\bin\\\\composer;\" + $env:Path; php --version)",
+      "PowerShell($phpIni = \"C:\\\\laragon\\\\bin\\\\php\\\\php-8.3.30-Win32-vs16-x64\\\\php.ini\"; \\(Get-Content $phpIni\\) -replace ';extension=zip', 'extension=zip' | Set-Content $phpIni; Select-String \"extension=zip\" $phpIni)",
+      "Bash(Get-Content \"C:\\\\Users\\\\ADMINI~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Administrateur-Documents-CLAUDE-AI-crmtech\\\\0336a44a-cd08-4f4a-9298-154cc6b1104c\\\\tasks\\\\bi7vkmh4a.output\" -Wait)",
+      "PowerShell(schtasks /create /tn \"TechCRM - Rappels Contrats\" /tr \"C:\\\\laragon\\\\www\\\\crmtech-api\\\\run-scheduler.bat\" /sc daily /st 08:00 /f 2>&1)",
+      "Bash(\"C:\\\\laragon\\\\bin\\\\php\\\\php-8.3.30-Win32-vs16-x64\\\\php.exe\" artisan *)",
+      "Bash(curl -s http://localhost:11434/api/tags)",
+      "Bash(\"C:\\\\laragon\\\\bin\\\\php\\\\php-8.3.30-Win32-vs16-x64\\\\php.exe\" -r \"require 'vendor/autoload.php';\")",
+      "Bash(\"C:\\\\laragon\\\\bin\\\\php\\\\php-8.3.30-Win32-vs16-x64\\\\php.exe\" composer.phar require phpoffice/phpword)",
+      "Bash(\"C:\\\\laragon\\\\bin\\\\php\\\\php-8.3.30-Win32-vs16-x64\\\\php.exe\" \"C:\\\\laragon\\\\bin\\\\composer\\\\composer.phar\" require phpoffice/phpword)",
+      "Bash(curl -s http://localhost:8000/api/init)",
+      "Bash(\"C:\\\\laragon\\\\bin\\\\php\\\\php-8.3.30-Win32-vs16-x64\\\\php.exe\" -r \"echo substr\\(file_get_contents\\('php://stdin'\\), 0, 120\\) . '...';\")",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash('C:\\\\laragon\\\\bin\\\\php\\\\php-8.3.30-Win32-vs16-x64\\\\php.exe' artisan *)",
+      "Bash(curl -s http://localhost:8000/api/techniciens)",
+      "Bash(\"C:\\\\laragon\\\\bin\\\\php\\\\php-8.3.30-Win32-vs16-x64\\\\php.exe\" -r \"echo substr\\(file_get_contents\\('php://stdin'\\),0,150\\);\")",
+      "Bash(del \"C:\\\\Users\\\\Administrateur\\\\Documents\\\\CLAUDE AI\\\\crmtech\\\\export_new.js\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Administrateur\\\\Documents\\\\CLAUDE AI\\\\crmtech\" -Recurse -Depth 3)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "PowerShell(php --version 2>$null)",
+      "PowerShell(if \\(-not $?\\) { \"PHP non install�\" })"
+    ]
+  }
+}

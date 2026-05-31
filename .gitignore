@@ -1,0 +1,16 @@
+# Archive
+crm-service-technique.zip
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Éditeurs
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Logs
+*.log
