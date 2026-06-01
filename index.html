@@ -318,18 +318,18 @@
       </div>
       <div class="content">
         <div class="metrics">
-          <div class="metric metric-blue"><div class="metric-label">Tickets résolus</div><div class="metric-val">247</div><div class="metric-sub">▲ 12%</div></div>
-          <div class="metric metric-teal"><div class="metric-label">Taux résolution</div><div class="metric-val">94%</div><div class="metric-sub">▲ 2 pts</div></div>
-          <div class="metric metric-pink"><div class="metric-label">Satisfaction</div><div class="metric-val">4.6/5</div><div class="metric-sub">38 avis</div></div>
-          <div class="metric metric-orange"><div class="metric-label">CA contrats</div><div class="metric-val">14.2M</div><div class="metric-sub">FCFA ce mois</div></div>
+          <div class="metric metric-blue"><div class="metric-label" id="st-m1-lbl">Tickets résolus</div><div class="metric-val" id="st-m1-val">—</div><div class="metric-sub" id="st-m1-sub"></div></div>
+          <div class="metric metric-teal"><div class="metric-label" id="st-m2-lbl">Taux résolution</div><div class="metric-val" id="st-m2-val">—</div><div class="metric-sub" id="st-m2-sub"></div></div>
+          <div class="metric metric-pink"><div class="metric-label" id="st-m3-lbl">Satisfaction</div><div class="metric-val" id="st-m3-val">—</div><div class="metric-sub" id="st-m3-sub"></div></div>
+          <div class="metric metric-orange"><div class="metric-label" id="st-m4-lbl">CA contrats</div><div class="metric-val" id="st-m4-val">—</div><div class="metric-sub" id="st-m4-sub"></div></div>
         </div>
         <div class="two-col">
           <div class="card">
-            <div class="card-title">Tickets par mois</div>
-            <div class="chart-wrap chart-wrap-180"><canvas id="chart-tickets" role="img" aria-label="Tickets par mois">Données tickets mensuels</canvas></div>
+            <div class="card-title" id="st-chart1-title">Tickets par mois</div>
+            <div class="chart-wrap chart-wrap-180"><canvas id="chart-tickets"></canvas></div>
           </div>
           <div class="card">
-            <div class="card-title">Répartition par catégorie</div>
+            <div class="card-title" id="st-chart2-title">Répartition par catégorie</div>
             <div class="chart-legend">
               <div class="chart-legend-item"><span class="chart-legend-dot" style="background:#6a5af9"></span>Matériel</div>
               <div class="chart-legend-item"><span class="chart-legend-dot" style="background:#38ef7d"></span>Logiciel</div>
@@ -341,12 +341,12 @@
         </div>
         <div class="two-col">
           <div class="card">
-            <div class="card-title">Performance techniciens</div>
-            <div class="chart-wrap chart-wrap-160"><canvas id="chart-tech" role="img" aria-label="Performance techniciens">Performance par technicien</canvas></div>
+            <div class="card-title" id="st-chart3-title">Performance techniciens</div>
+            <div class="chart-wrap chart-wrap-160"><canvas id="chart-tech"></canvas></div>
           </div>
           <div class="card">
-            <div class="card-title">Évolution délai moyen (h)</div>
-            <div class="chart-wrap chart-wrap-160"><canvas id="chart-delai" role="img" aria-label="Délai moyen">Évolution délai</canvas></div>
+            <div class="card-title" id="st-chart4-title">Évolution délai moyen (h)</div>
+            <div class="chart-wrap chart-wrap-160"><canvas id="chart-delai"></canvas></div>
           </div>
         </div>
       </div>

@@ -1361,10 +1361,9 @@ function exportWord(type, filtreClient, filtreStatut) {
 
 /* ---- Statistiques --------------------------------- */
 function renderStats() {
-  const n = parseInt(document.getElementById('stat-period').value);
+  const n    = parseInt(document.getElementById('stat-period').value);
   const allM = ['Déc','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov'];
   const months = allM.slice(12 - n);
-  const data1  = Array.from({ length: n }, () => Math.round(30 + Math.random() * 30));
   const grid = 'rgba(255,255,255,0.05)';
   const tick = '#8b90b8';
   const base = {
@@ -1375,48 +1374,126 @@ function renderStats() {
       x: { grid: { display: false }, ticks: { color: tick } },
     }
   };
-  if (charts.t) charts.t.destroy();
-  charts.t = new Chart(document.getElementById('chart-tickets'), {
-    type: 'bar',
-    data: { labels: months, datasets: [{ label:'Tickets', data: data1, backgroundColor:'rgba(106,90,249,0.7)', borderRadius:5 }] },
-    options: base,
-  });
-  if (charts.c) charts.c.destroy();
-  charts.c = new Chart(document.getElementById('chart-cat'), {
-    type: 'doughnut',
-    data: {
-      labels: ['Matériel','Logiciel','Réseau','Électrique'],
-      datasets: [{ data:[42,27,18,13], backgroundColor:['#6a5af9','#38ef7d','#ffd200','#ff4f6d'], borderWidth:0 }]
-    },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, cutout:'62%' }
-  });
-  if (charts.p) charts.p.destroy();
-  charts.p = new Chart(document.getElementById('chart-tech'), {
-    type: 'bar',
-    data: {
-      labels: techniciens.map(t => t.nom.split(' ').map((w,i)=>i===0?w[0]+'.':w).join(' ')),
-      datasets: [{ label:'Résolus', data: techniciens.map(t=>t.resolus), backgroundColor:'rgba(56,239,125,0.65)', borderRadius:5 }]
-    },
-    options: { ...base, indexAxis:'y',
-      scales: { x: { beginAtZero:true, grid:{color:grid}, ticks:{color:tick} }, y: { grid:{display:false}, ticks:{color:tick} } }
-    }
-  });
-  if (charts.d) charts.d.destroy();
-  charts.d = new Chart(document.getElementById('chart-delai'), {
-    type: 'line',
-    data: {
-      labels: months,
-      datasets: [{
-        label:'Délai (h)',
-        data: Array.from({length:n},(_,i)=>parseFloat((2.8-i*.05+Math.random()*.4).toFixed(1))),
-        borderColor:'#f953c6', backgroundColor:'rgba(249,83,198,0.08)',
-        tension:.4, pointRadius:3, fill:true
-      }]
-    },
-    options: { ...base,
-      scales: { y:{beginAtZero:false,grid:{color:grid},ticks:{color:tick}}, x:{grid:{display:false},ticks:{color:tick}} }
-    }
-  });
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  const tech = isTech();
+
+  if (tech) {
+    /* ======= VUE TECHNICIEN ======= */
+    const vt = visibleTickets();
+    const vd = visibleDepannages();
+    const vi = visibleInstallations();
+
+    const resolus    = vt.filter(t => t.statut === 'Résolu').length;
+    const total      = vt.length;
+    const taux       = total > 0 ? Math.round((resolus / total) * 100) : 0;
+    const depResolus = vd.filter(d => d.statut === 'Résolu').length;
+    const instFin    = vi.filter(i => i.avancement === 100).length;
+
+    set('st-m1-lbl', 'Tickets résolus');       set('st-m1-val', resolus);        set('st-m1-sub', `sur ${total} au total`);
+    set('st-m2-lbl', 'Taux de résolution');    set('st-m2-val', taux + '%');     set('st-m2-sub', taux >= 80 ? '▲ Bon niveau' : 'À améliorer');
+    set('st-m3-lbl', 'Dépannages résolus');    set('st-m3-val', depResolus);     set('st-m3-sub', `sur ${vd.length} au total`);
+    set('st-m4-lbl', 'Installations finies');  set('st-m4-val', instFin);        set('st-m4-sub', `sur ${vi.length} en cours`);
+
+    // Chart 1 : mes tickets par statut
+    set('st-chart1-title', 'Mes tickets par statut');
+    const statuts = ['Ouvert','En cours','Résolu','Annulé'];
+    const statColors = ['rgba(106,90,249,0.7)','rgba(255,210,0,0.7)','rgba(56,239,125,0.7)','rgba(255,255,255,0.15)'];
+    if (charts.t) charts.t.destroy();
+    charts.t = new Chart(document.getElementById('chart-tickets'), {
+      type: 'bar',
+      data: { labels: statuts, datasets: [{ label:'Tickets', data: statuts.map(s => vt.filter(t=>t.statut===s).length), backgroundColor: statColors, borderRadius:5 }] },
+      options: base,
+    });
+
+    // Chart 2 : mes tickets par catégorie
+    set('st-chart2-title', 'Mes tickets par catégorie');
+    const cats = ['Matériel','Logiciel','Réseau','Électrique'];
+    if (charts.c) charts.c.destroy();
+    charts.c = new Chart(document.getElementById('chart-cat'), {
+      type: 'doughnut',
+      data: { labels: cats, datasets: [{ data: cats.map(c => vt.filter(t=>t.cat===c).length), backgroundColor:['#6a5af9','#38ef7d','#ffd200','#ff4f6d'], borderWidth:0 }] },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, cutout:'62%' }
+    });
+
+    // Chart 3 : mes dépannages par statut
+    set('st-chart3-title', 'Mes dépannages par statut');
+    const depStatuts = ['En cours','Résolu','Annulé'];
+    const depColors  = ['rgba(255,210,0,0.7)','rgba(56,239,125,0.7)','rgba(255,255,255,0.15)'];
+    if (charts.p) charts.p.destroy();
+    charts.p = new Chart(document.getElementById('chart-tech'), {
+      type: 'doughnut',
+      data: { labels: depStatuts, datasets: [{ data: depStatuts.map(s => vd.filter(d=>d.statut===s).length), backgroundColor: depColors, borderWidth:0 }] },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#8b90b8',font:{size:11}}}}, cutout:'55%' }
+    });
+
+    // Chart 4 : avancement de mes installations
+    set('st-chart4-title', 'Avancement de mes installations');
+    if (charts.d) charts.d.destroy();
+    charts.d = new Chart(document.getElementById('chart-delai'), {
+      type: 'bar',
+      data: {
+        labels: vi.map(i => i.titre.length > 18 ? i.titre.slice(0,18)+'…' : i.titre),
+        datasets: [{ label:'Avancement (%)', data: vi.map(i=>i.avancement), backgroundColor:'rgba(106,90,249,0.7)', borderRadius:5 }]
+      },
+      options: { ...base, scales: { y:{beginAtZero:true,max:100,grid:{color:grid},ticks:{color:tick,callback:v=>v+'%'}}, x:{grid:{display:false},ticks:{color:tick}} } }
+    });
+
+  } else {
+    /* ======= VUE ADMIN / MANAGER ======= */
+    const resolus    = tickets.filter(t => t.statut === 'Résolu').length;
+    const totalT     = tickets.length;
+    const taux       = totalT > 0 ? Math.round((resolus / totalT) * 100) : 0;
+    const contActif  = contrats.filter(c => c.statut === 'Actif').length;
+    const caTotal    = contrats.filter(c=>c.statut==='Actif').reduce((s,c)=>s+parseInt((c.montant||'0').replace(/\s/g,''),10),0);
+    const caM        = (caTotal/1000000).toFixed(1) + 'M';
+
+    set('st-m1-lbl', 'Tickets résolus');    set('st-m1-val', resolus);  set('st-m1-sub', `▲ taux ${taux}%`);
+    set('st-m2-lbl', 'Taux résolution');    set('st-m2-val', taux+'%'); set('st-m2-sub', taux>=90?'▲ Excellent':'▲ Bon');
+    set('st-m3-lbl', 'Satisfaction');       set('st-m3-val', '4.6/5');  set('st-m3-sub', '38 avis');
+    set('st-m4-lbl', 'CA contrats actifs'); set('st-m4-val', caM);      set('st-m4-sub', `FCFA — ${contActif} contrats`);
+
+    const data1 = Array.from({ length: n }, () => Math.round(30 + Math.random() * 30));
+    set('st-chart1-title', 'Tickets par mois');
+    if (charts.t) charts.t.destroy();
+    charts.t = new Chart(document.getElementById('chart-tickets'), {
+      type: 'bar',
+      data: { labels: months, datasets: [{ label:'Tickets', data: data1, backgroundColor:'rgba(106,90,249,0.7)', borderRadius:5 }] },
+      options: base,
+    });
+
+    const cats = ['Matériel','Logiciel','Réseau','Électrique'];
+    set('st-chart2-title', 'Répartition par catégorie');
+    if (charts.c) charts.c.destroy();
+    charts.c = new Chart(document.getElementById('chart-cat'), {
+      type: 'doughnut',
+      data: { labels: cats, datasets: [{ data: cats.map(c=>tickets.filter(t=>t.cat===c).length||0), backgroundColor:['#6a5af9','#38ef7d','#ffd200','#ff4f6d'], borderWidth:0 }] },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, cutout:'62%' }
+    });
+
+    set('st-chart3-title', 'Performance techniciens');
+    if (charts.p) charts.p.destroy();
+    charts.p = new Chart(document.getElementById('chart-tech'), {
+      type: 'bar',
+      data: {
+        labels: techniciens.map(t => t.nom.split(' ').map((w,i)=>i===0?w[0]+'.':w).join(' ')),
+        datasets: [{ label:'Résolus', data: techniciens.map(t=>t.resolus), backgroundColor:'rgba(56,239,125,0.65)', borderRadius:5 }]
+      },
+      options: { ...base, indexAxis:'y',
+        scales: { x:{beginAtZero:true,grid:{color:grid},ticks:{color:tick}}, y:{grid:{display:false},ticks:{color:tick}} }
+      }
+    });
+
+    set('st-chart4-title', 'Évolution délai moyen (h)');
+    if (charts.d) charts.d.destroy();
+    charts.d = new Chart(document.getElementById('chart-delai'), {
+      type: 'line',
+      data: {
+        labels: months,
+        datasets: [{ label:'Délai (h)', data: Array.from({length:n},(_,i)=>parseFloat((2.8-i*.05+Math.random()*.4).toFixed(1))), borderColor:'#f953c6', backgroundColor:'rgba(249,83,198,0.08)', tension:.4, pointRadius:3, fill:true }]
+      },
+      options: { ...base, scales: { y:{beginAtZero:false,grid:{color:grid},ticks:{color:tick}}, x:{grid:{display:false},ticks:{color:tick}} } }
+    });
+  }
 }
 
 /* ---- Modals (création) ----------------------------- */
