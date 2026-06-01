@@ -504,6 +504,37 @@
           </div>
         </div>
 
+        <!-- Changer mot de passe -->
+        <div class="card">
+          <div class="card-title"><i class="ti ti-lock ic-green" style="margin-right:8px"></i>Mon mot de passe</div>
+          <div class="fg3" style="margin-top:4px">
+            <div class="form-group">
+              <label class="form-label">Mot de passe actuel</label>
+              <div style="position:relative">
+                <input id="pw-current" type="password" placeholder="••••••••" class="param-input" autocomplete="current-password">
+                <button type="button" onclick="togglePwField('pw-current',this)" class="pw-eye-btn"><i class="ti ti-eye"></i></button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nouveau mot de passe</label>
+              <div style="position:relative">
+                <input id="pw-new" type="password" placeholder="min. 6 caractères" class="param-input" autocomplete="new-password">
+                <button type="button" onclick="togglePwField('pw-new',this)" class="pw-eye-btn"><i class="ti ti-eye"></i></button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirmer</label>
+              <div style="position:relative">
+                <input id="pw-confirm" type="password" placeholder="Répéter le mot de passe" class="param-input" autocomplete="new-password">
+                <button type="button" onclick="togglePwField('pw-confirm',this)" class="pw-eye-btn"><i class="ti ti-eye"></i></button>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:12px">
+            <button class="btn btn-primary" onclick="changePassword()"><i class="ti ti-shield-check" style="color:#4ade80"></i> Mettre à jour</button>
+          </div>
+        </div>
+
         <!-- Informations système -->
         <div class="card">
           <div class="card-title"><i class="ti ti-info-circle ic-slate" style="margin-right:8px"></i>Informations système</div>

@@ -782,23 +782,58 @@ function saveTech() {
     .then(() => { closeModal(); reload(renderTechniciens); showNotif('Technicien mis à jour'); });
 }
 
+function togglePwField(id, btn) {
+  const input = document.getElementById(id);
+  const icon  = btn.querySelector('i');
+  if (!input) return;
+  input.type = input.type === 'password' ? 'text' : 'password';
+  icon.className = input.type === 'password' ? 'ti ti-eye' : 'ti ti-eye-off';
+}
+
 function addTech() {
-  const nom = document.getElementById('e-nom').value.trim();
-  if (!nom) return;
+  const nom      = document.getElementById('e-nom').value.trim();
+  const login    = (document.getElementById('e-login')?.value    || '').trim().toLowerCase();
+  const password = (document.getElementById('e-password')?.value || '').trim();
+
+  if (!nom)             { showNotif('⚠️ Le nom est requis'); return; }
+  if (!login)           { showNotif('⚠️ L\'identifiant de connexion est requis'); return; }
+  if (password.length < 6) { showNotif('⚠️ Mot de passe trop court (min. 6 car.)'); return; }
+  if (getAllUsers().some(u => u.login === login)) {
+    showNotif('⚠️ Cet identifiant est déjà utilisé'); return;
+  }
+
   const fd = buildTechFormData({
     nom,
     specialite: document.getElementById('e-spec').value.trim(),
     telephone:  document.getElementById('e-tel').value.trim(),
     statut:     document.getElementById('e-statut').value,
   });
+
   fetch(`${API}/techniciens`, { method:'POST', headers:{'Accept':'application/json'}, body:fd })
     .then(r => r.json())
-    .then(() => { closeModal(); reload(renderTechniciens); showNotif('Technicien ajouté'); });
+    .then(() => {
+      const initials = nom.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+      const extras   = getExtraUsers();
+      extras.push({ login, password, nom, role:'Technicien', avatar:initials, techNom:nom, base:false });
+      saveExtraUsers(extras);
+      closeModal();
+      reload(renderTechniciens);
+      renderComptes();
+      showNotif(`${nom} ajouté avec accès CRM ✅`);
+    });
 }
 
 function deleteTech(id) {
+  const tech = techniciens.find(t => t._id === id);
   apiFetch.delete(`/techniciens/${id}`).then(() => {
-    reload(renderTechniciens); showNotif('Technicien supprimé');
+    // Supprimer le compte CRM associé
+    if (tech) {
+      const extras = getExtraUsers().filter(u => u.techNom !== tech.nom);
+      saveExtraUsers(extras);
+      renderComptes();
+    }
+    reload(renderTechniciens);
+    showNotif('Technicien supprimé');
   });
 }
 
@@ -1139,8 +1174,8 @@ const modalTemplates = {
       </div>
     </div>
     <div class="fg2">
-      <div class="form-group"><label class="form-label">Nom complet</label><input id="e-nom" type="text" placeholder="Prénom Nom"></div>
-      <div class="form-group"><label class="form-label">Poste occupé</label><input id="e-spec" type="text" placeholder="Ex: Technicien réseau, Chef de projet…"></div>
+      <div class="form-group"><label class="form-label">Nom complet <span style="color:#f87171">*</span></label><input id="e-nom" type="text" placeholder="Prénom Nom"></div>
+      <div class="form-group"><label class="form-label">Poste occupé</label><input id="e-spec" type="text" placeholder="Ex: Technicien réseau…"></div>
     </div>
     <div class="fg2">
       <div class="form-group"><label class="form-label">Téléphone</label><input id="e-tel" type="tel" placeholder="+225 07 00 00 00"></div>
@@ -1148,6 +1183,21 @@ const modalTemplates = {
         <select id="e-statut"><option>Disponible</option><option>Occupé</option><option>En intervention</option></select>
       </div>
     </div>
+    <div class="modal-section-divider"><i class="ti ti-lock"></i> Accès CRM</div>
+    <div class="fg2">
+      <div class="form-group">
+        <label class="form-label">Identifiant de connexion <span style="color:#f87171">*</span></label>
+        <input id="e-login" type="text" placeholder="ex: k.diallo" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mot de passe initial <span style="color:#f87171">*</span></label>
+        <div style="position:relative">
+          <input id="e-password" type="password" placeholder="min. 6 caractères" autocomplete="new-password">
+          <button type="button" onclick="togglePwField('e-password',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:15px"><i class="ti ti-eye"></i></button>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:4px"><i class="ti ti-info-circle" style="margin-right:4px"></i>Le technicien pourra modifier son mot de passe depuis ses paramètres.</div>
     <div class="modal-actions"><button class="btn" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="addTech()"><i class="ti ti-user-plus" style="color:#4ade80"></i> Ajouter</button></div>`,
 };
 
@@ -1451,6 +1501,36 @@ function renderParametres() {
   renderComptes();
 }
 
+function changePassword() {
+  const current = document.getElementById('pw-current')?.value  || '';
+  const next    = document.getElementById('pw-new')?.value      || '';
+  const confirm = document.getElementById('pw-confirm')?.value  || '';
+  const session = getSession();
+  if (!session) return;
+
+  // Vérifier le mot de passe actuel
+  const me = getAllUsers().find(u => u.login === session.login);
+  if (!me || me.password !== current) {
+    showNotif('⚠️ Mot de passe actuel incorrect'); return;
+  }
+  if (next.length < 6) {
+    showNotif('⚠️ Nouveau mot de passe trop court (min. 6 caractères)'); return;
+  }
+  if (next !== confirm) {
+    showNotif('⚠️ Les mots de passe ne correspondent pas'); return;
+  }
+
+  // Appliquer l'override
+  setPwOverride(session.login, next);
+
+  // Vider les champs
+  ['pw-current','pw-new','pw-confirm'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  showNotif('Mot de passe mis à jour ✅');
+}
+
 function saveParametres() {
   const p = {
     societe:      document.getElementById('p-societe')?.value.trim(),
@@ -1636,6 +1716,7 @@ async function telechargerRapport() {
 
 const AUTH_KEY      = 'crmtech_auth_v1';
 const ACCOUNTS_KEY  = 'crmtech_accounts_v1';
+const PW_KEY        = 'crmtech_pw_v1';       // overrides de mots de passe
 
 /* Comptes de base non modifiables */
 const BASE_USERS = [
@@ -1643,15 +1724,29 @@ const BASE_USERS = [
   { login: 'manager', password: 'manager1', nom: 'Manager',        role: 'Manager',        avatar: 'MG', techNom: null, base: true },
 ];
 
-/* Comptes dynamiques créés par l'admin (stockés en localStorage) */
+/* Comptes dynamiques créés par l'admin */
 function getExtraUsers() {
   try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || '[]'); } catch(_) { return []; }
 }
 function saveExtraUsers(list) {
   localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list));
 }
+
+/* Overrides de mots de passe (pour tous les comptes) */
+function getPwOverrides() {
+  try { return JSON.parse(localStorage.getItem(PW_KEY) || '{}'); } catch(_) { return {}; }
+}
+function setPwOverride(login, password) {
+  const ov = getPwOverrides();
+  ov[login] = password;
+  localStorage.setItem(PW_KEY, JSON.stringify(ov));
+}
+
+/* Liste complète avec mots de passe appliqués */
 function getAllUsers() {
-  return [...BASE_USERS, ...getExtraUsers()];
+  const overrides = getPwOverrides();
+  const all = [...BASE_USERS, ...getExtraUsers()];
+  return all.map(u => overrides[u.login] ? { ...u, password: overrides[u.login] } : u);
 }
 
 function getSession() {

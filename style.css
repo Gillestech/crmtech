@@ -296,6 +296,27 @@
 .compte-nom   { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .compte-login { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 1px; }
 
+/* Séparateur de section dans les modals */
+.modal-section-divider {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--accent);
+  margin: 14px 0 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.modal-section-divider i { font-size: 14px; }
+
+/* Bouton œil dans les champs param */
+.pw-eye-btn {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); font-size: 15px;
+  padding: 4px; display: flex; align-items: center;
+  transition: color .15s;
+}
+.pw-eye-btn:hover { color: var(--text-secondary); }
+
 :root {
   /* Dark palette */
   --bg-app:        #151823;
@@ -964,6 +985,7 @@ select option { background: var(--bg-card); }
   outline: none; transition: border .15s; width: 100%;
 }
 .param-input:focus { border-color: var(--accent); }
+input[type="password"].param-input { padding-right: 36px; }
 
 .param-row {
   display: flex; align-items: center; justify-content: space-between;
