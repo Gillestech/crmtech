@@ -127,10 +127,120 @@ async function loadAll() {
   }
 }
 
+/* ---- Carte des fonctions de rendu par page -------- */
+const PAGE_RENDERS = {
+  dashboard:     () => renderDash(),
+  calendrier:    () => renderCalendar(),
+  tickets:       () => renderTickets(),
+  depannages:    () => renderDepannages(),
+  installations: () => renderInstallations(),
+  contrats:      () => renderContrats(),
+  clients:       () => renderClients(),
+  techniciens:   () => renderTechniciens(),
+  statistiques:  () => renderStats(),
+  historique:    () => renderHistorique(),
+  export:        () => renderExport(),
+  parametres:    () => renderParametres(),
+};
+
+function getCurrentPage() {
+  return localStorage.getItem('crmtech_page') || 'dashboard';
+}
+
+function renderCurrentPage() {
+  const fn = PAGE_RENDERS[getCurrentPage()];
+  if (fn) fn();
+}
+
+/* Reload après écriture (technicien ou admin) */
 async function reload(renderFn) {
+  const indicator = document.getElementById('refresh-indicator');
+  if (indicator) indicator.style.opacity = '1';
   await loadAll();
+  if (indicator) indicator.style.opacity = '0';
   if (renderFn) renderFn();
-  renderDash();
+  // Re-rendre aussi le panel courant si différent de la fn passée
+  renderCurrentPage();
+  setSyncSuccess();
+}
+
+/* ---- Auto-refresh --------------------------------- */
+let autoRefreshTimer   = null;
+let lastRefreshAt      = null;
+let syncLabelTimer     = null;
+
+function setSyncSuccess() {
+  lastRefreshAt = new Date();
+  const dot   = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  const btn   = document.getElementById('sync-btn');
+  if (dot)   { dot.className = ''; }
+  if (btn)   btn.classList.remove('spinning');
+  updateSyncLabel();
+}
+
+function setSyncLoading() {
+  const dot = document.getElementById('sync-dot');
+  const btn = document.getElementById('sync-btn');
+  if (dot) dot.className = 'syncing';
+  if (btn) btn.classList.add('spinning');
+  const label = document.getElementById('sync-label');
+  if (label) label.textContent = 'Synchronisation…';
+}
+
+function setSyncError() {
+  const dot   = document.getElementById('sync-dot');
+  const btn   = document.getElementById('sync-btn');
+  if (dot) dot.className = 'error';
+  if (btn) btn.classList.remove('spinning');
+  const label = document.getElementById('sync-label');
+  if (label) label.textContent = 'Hors ligne';
+}
+
+function updateSyncLabel() {
+  const label = document.getElementById('sync-label');
+  if (!label || !lastRefreshAt) return;
+  const s = Math.floor((Date.now() - lastRefreshAt) / 1000);
+  if (s < 10)       label.textContent = 'Synchro à l\'instant';
+  else if (s < 60)  label.textContent = `Synchro il y a ${s}s`;
+  else {
+    const m = Math.floor(s / 60);
+    label.textContent = `Synchro il y a ${m} min`;
+  }
+}
+
+async function silentRefresh() {
+  setSyncLoading();
+  const indicator = document.getElementById('refresh-indicator');
+  if (indicator) indicator.style.opacity = '1';
+  try {
+    await loadAll();
+    renderCurrentPage();
+    setSyncSuccess();
+  } catch(_) {
+    setSyncError();
+  } finally {
+    if (indicator) indicator.style.opacity = '0';
+  }
+}
+
+async function manualRefresh() {
+  await silentRefresh();
+  showNotif('Données actualisées ✅');
+}
+
+function startAutoRefresh() {
+  // Effacer les timers existants
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  if (syncLabelTimer)   clearInterval(syncLabelTimer);
+
+  // Rafraîchissement auto toutes les 30s
+  autoRefreshTimer = setInterval(silentRefresh, 30000);
+
+  // Mise à jour du label "il y a Xs" toutes les 10s
+  syncLabelTimer = setInterval(updateSyncLabel, 10000);
+
+  setSyncSuccess();
 }
 
 /* ---- Navigation ----------------------------------- */
@@ -2154,25 +2264,23 @@ async function initApp() {
     restoreNav();
   }
 
-  // 2. Rafraîchissement depuis l'API en arrière-plan
+  // 2. Rafraîchissement initial depuis l'API
+  setSyncLoading();
   const indicator = document.getElementById('refresh-indicator');
   if (indicator) indicator.style.opacity = '1';
   await loadAll();
   if (indicator) indicator.style.opacity = '0';
+  setSyncSuccess();
 
   // 3. Si pas de cache, premier affichage après l'API
   if (!hasCacheData) {
     restoreNav();
   } else {
-    // Mettre à jour silencieusement la vue active
-    const saved = localStorage.getItem('crmtech_page') || 'dashboard';
-    const renders = { dashboard:renderDash, calendrier:renderCalendar, tickets:renderTickets,
-      depannages:renderDepannages, installations:renderInstallations, contrats:renderContrats,
-      clients:renderClients, techniciens:renderTechniciens, statistiques:renderStats,
-      historique:renderHistorique, export:renderExport, parametres:renderParametres };
-    if (renders[saved]) renders[saved]();
-    else renderDash();
+    renderCurrentPage();
   }
+
+  // 4. Démarrer le polling automatique toutes les 30s
+  startAutoRefresh();
 
   document.getElementById('modal-overlay').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeModal();
