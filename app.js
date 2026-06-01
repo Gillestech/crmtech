@@ -2147,7 +2147,7 @@ function applyRoleUI() {
   if (roleEl && s) roleEl.textContent = s.role;
   // Si technicien sur une page interdite, rediriger vers dashboard
   if (tech) {
-    const forbidden = ['contrats','clients','statistiques','export'];
+    const forbidden = ['contrats','clients','techniciens','export'];
     const cur = localStorage.getItem('crmtech_page') || 'dashboard';
     if (forbidden.includes(cur)) {
       localStorage.setItem('crmtech_page','dashboard');
