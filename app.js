@@ -1097,19 +1097,80 @@ function deleteTech(id) {
 }
 
 /* ---- Historique ----------------------------------- */
+
+/* Construit l'historique dynamique depuis les données réelles */
+function buildTechHistorique() {
+  const entries = [];
+
+  visibleTickets().forEach(t => {
+    const resolved = t.statut === 'Résolu';
+    entries.push({
+      type:   'ticket',
+      icon:   resolved ? 'ti-check' : 'ti-ticket',
+      cls:    'ticket',
+      title:  `Ticket ${t.id} — ${resolved ? 'résolu' : t.statut.toLowerCase()}`,
+      detail: `${t.sujet} — ${t.client}`,
+      time:   t.date || '—',
+      prio:   t.prio,
+    });
+  });
+
+  visibleDepannages().forEach(d => {
+    const resolved = d.statut === 'Résolu';
+    entries.push({
+      type:   'dep',
+      icon:   resolved ? 'ti-check' : 'ti-urgent',
+      cls:    'dep',
+      title:  `Dépannage ${d.id} — ${resolved ? 'résolu' : d.statut.toLowerCase()}`,
+      detail: `${d.desc} — ${d.client}`,
+      time:   d.date || '—',
+      prio:   d.prio,
+    });
+  });
+
+  visibleInstallations().forEach(i => {
+    const done = i.avancement === 100;
+    entries.push({
+      type:   'install',
+      icon:   done ? 'ti-check' : 'ti-building-cog',
+      cls:    'install',
+      title:  `Installation ${i.id} — ${done ? 'terminée' : i.avancement + '% avancement'}`,
+      detail: `${i.titre} — ${i.client}`,
+      time:   i.debut || '—',
+    });
+  });
+
+  // Trier : résolus/terminés en dernier, actifs en premier
+  return entries.sort((a, b) => {
+    const aResolu = a.title.includes('résolu') || a.title.includes('terminée');
+    const bResolu = b.title.includes('résolu') || b.title.includes('terminée');
+    return aResolu - bResolu;
+  });
+}
+
 function renderHistorique() {
-  const f = document.getElementById('hist-filter').value;
-  let list = historique;
-  if (f) list = list.filter(h => h.type === f);
-  document.getElementById('hist-list').innerHTML = list.map(h => `
-    <div class="hist-item">
-      <div class="hist-icon ${h.cls}"><i class="ti ${h.icon}"></i></div>
-      <div class="hist-body">
-        <div class="hist-title">${h.title}</div>
-        <div class="hist-detail">${h.detail}</div>
-      </div>
-      <div class="hist-time">${h.time}</div>
-    </div>`).join('');
+  const f    = document.getElementById('hist-filter').value;
+  const tech = isTech();
+
+  let list = tech ? buildTechHistorique() : historique;
+
+  if (f) {
+    const typeMap = { ticket:'ticket', dep:'dep', install:'install', contrat:'contrat' };
+    list = list.filter(h => h.type === (typeMap[f] || f));
+  }
+
+  const empty = tech ? 'Aucune activité trouvée' : 'Aucun historique';
+  document.getElementById('hist-list').innerHTML = list.length
+    ? list.map(h => `
+        <div class="hist-item">
+          <div class="hist-icon ${h.cls}"><i class="ti ${h.icon}"></i></div>
+          <div class="hist-body">
+            <div class="hist-title">${h.title}</div>
+            <div class="hist-detail">${h.detail}</div>
+          </div>
+          <div class="hist-time">${h.time}</div>
+        </div>`).join('')
+    : `<div style="color:var(--text-muted);font-size:12px;padding:16px 0">${empty}</div>`;
 }
 
 /* ---- Export PDF ----------------------------------- */
