@@ -601,10 +601,10 @@ function renderDepannages() {
       <td class="muted">${d.date}</td>
       <td style="font-weight:600;color:var(--green);font-size:11.5px">${d.montant ? d.montant+' FCFA' : '<span class="muted">—</span>'}</td>
       <td><div class="rf">
-        ${tech
-          ? `<button class="btn btn-sm" onclick="resolveDepannage(${d._id})" title="Marquer résolu"><i class="ti ti-circle-check ic-action-resolve"></i></button>`
-          : `<button class="btn btn-sm" onclick="editDepannage(${d._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>
+        ${!tech
+          ? `<button class="btn btn-sm" onclick="editDepannage(${d._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>
              <button class="btn btn-sm btn-danger" onclick="deleteDepannage(${d._id})" title="Supprimer"><i class="ti ti-trash-x" style="color:#f87171"></i></button>`
+          : `<span style="font-size:10px;color:var(--text-muted)">Lecture seule</span>`
         }
       </div></td>
     </tr>`).join('');
@@ -682,10 +682,10 @@ function renderInstallations() {
         <div><div class="inst-title">${inst.titre}</div><div class="inst-ref">${inst.id}</div></div>
         <div class="rf" style="gap:6px">
           ${statBadge(inst.statut)}
-          ${tech
-            ? `<button class="btn btn-sm" onclick="updateAvancement(${inst._id})" title="Mettre à jour avancement"><i class="ti ti-percentage ic-action-edit"></i></button>`
-            : `<button class="btn btn-sm" onclick="editInstallation(${inst._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>
+          ${!tech
+            ? `<button class="btn btn-sm" onclick="editInstallation(${inst._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>
                <button class="btn btn-sm btn-danger" onclick="deleteInstallation(${inst._id})" title="Supprimer"><i class="ti ti-trash-x" style="color:#f87171"></i></button>`
+            : ''
           }
         </div>
       </div>
@@ -1471,6 +1471,17 @@ function openModal(type) {
   const techOpts    = techniciens.map(t=>`<option>${t.nom}</option>`).join('');
   const today       = new Date().toISOString().split('T')[0];
 
+  // Champ technicien du ticket : verrouillé sur soi-même pour le technicien
+  const myName = myTechNom();
+  const techFieldTicket = isTech()
+    ? `<div class="form-group"><label class="form-label">Technicien</label>
+        <input id="n-tech" type="text" value="${myName}" readonly
+          style="background:var(--bg-input);opacity:.7;cursor:not-allowed;">
+       </div>`
+    : `<div class="form-group"><label class="form-label">Technicien</label>
+        <select id="n-tech">${techOpts}</select>
+       </div>`;
+
   const tpls = {
     ticket: `<div class="modal-hdr"><div class="modal-title">Nouveau ticket</div><button class="close-btn" onclick="closeModal()"><i class="ti ti-x" style="color:#f87171"></i></button></div>
       <div class="fg2">
@@ -1480,7 +1491,7 @@ function openModal(type) {
       <div class="form-group"><label class="form-label">Sujet</label><input id="n-sujet" type="text" placeholder="Décrivez le problème…"></div>
       <div class="fg3">
         <div class="form-group"><label class="form-label">Catégorie</label><select id="n-cat"><option>Matériel</option><option>Logiciel</option><option>Réseau</option><option>Électrique</option></select></div>
-        <div class="form-group"><label class="form-label">Technicien</label><select id="n-tech">${techOpts}</select></div>
+        ${techFieldTicket}
         <div class="form-group"><label class="form-label">Date prévue</label><input id="n-date" type="date" value="${today}"></div>
       </div>
       <div class="modal-actions"><button class="btn" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="createTicket()"><i class="ti ti-circle-plus" style="color:#4ade80"></i> Créer</button></div>`,
