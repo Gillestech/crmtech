@@ -2292,11 +2292,13 @@ async function initApp() {
 
 document.addEventListener('DOMContentLoaded', () => {
   const session = getSession();
+  const screen  = document.getElementById('login-screen');
   if (session) {
-    // Session existante → accès direct
+    // Session existante → l'écran de login reste caché, accès direct
     updateSidebarUser(session);
-    document.getElementById('login-screen').classList.add('hidden');
     initApp();
+  } else {
+    // Pas de session → afficher l'écran de connexion avec fondu
+    screen.classList.remove('hidden');
   }
-  // Sinon → l'écran de connexion est déjà visible (HTML par défaut)
 });
