@@ -88,9 +88,9 @@
       <span style="margin-bottom:2px">Comptes de démonstration :</span>
       <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
         <code onclick="fillDemo('admin','admin123')" title="Accès complet">admin / admin123</code>
-        <code onclick="fillDemo('karim','karim123')" title="Technicien">karim / karim123</code>
-        <code onclick="fillDemo('sophie','sophie123')" title="Technicienne">sophie / sophie123</code>
+        <code onclick="fillDemo('manager','manager1')" title="Manager">manager / manager1</code>
       </div>
+      <span style="font-size:11px;color:var(--text-muted);margin-top:2px">Les comptes techniciens sont créés par l'admin.</span>
     </div>
 
     <div class="login-footer">TechCRM v1.0 — Laravel 13 + MySQL</div>
@@ -490,6 +490,17 @@
               <div class="param-desc">Remplace "TechCRM" dans la sidebar</div>
             </div>
             <input id="p-appname" type="text" class="param-input" style="width:160px" placeholder="TechCRM">
+          </div>
+        </div>
+
+        <!-- Comptes utilisateurs (admin only) -->
+        <div class="card" data-admin id="card-comptes">
+          <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+            <span><i class="ti ti-users ic-cyan" style="margin-right:8px"></i>Comptes utilisateurs</span>
+            <button class="btn btn-primary btn-sm" onclick="openCreateCompte()"><i class="ti ti-user-plus" style="color:#4ade80"></i> Nouveau compte</button>
+          </div>
+          <div id="comptes-list" style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+            <div style="color:var(--text-muted);font-size:12px">Chargement…</div>
           </div>
         </div>
 

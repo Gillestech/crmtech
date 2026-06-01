@@ -1332,6 +1332,96 @@ function getParametres() {
   try { return JSON.parse(localStorage.getItem(PARAM_KEY) || '{}'); } catch(_) { return {}; }
 }
 
+/* ---- Gestion des comptes utilisateurs ------------- */
+function renderComptes() {
+  const el = document.getElementById('comptes-list');
+  if (!el) return;
+  const all = getAllUsers();
+  el.innerHTML = all.map(u => `
+    <div class="compte-row">
+      <div class="compte-avatar">${u.avatar}</div>
+      <div class="compte-info">
+        <div class="compte-nom">${u.nom}</div>
+        <div class="compte-login"><i class="ti ti-at" style="font-size:11px"></i> ${u.login}</div>
+      </div>
+      <span class="badge ${u.role==='Administrateur'?'b-purple':u.role==='Manager'?'b-blue':'b-teal'}">${u.role}</span>
+      ${u.techNom ? `<span style="font-size:11px;color:var(--text-muted)">→ ${u.techNom}</span>` : ''}
+      ${!u.base
+        ? `<button class="btn btn-sm btn-danger" onclick="deleteCompte('${u.login}')" title="Supprimer"><i class="ti ti-trash-x" style="color:#f87171"></i></button>`
+        : `<span style="font-size:10px;color:var(--text-muted);padding:0 6px">système</span>`
+      }
+    </div>`).join('');
+}
+
+function openCreateCompte() {
+  const techOptions = techniciens
+    .filter(t => !getAllUsers().some(u => u.techNom === t.nom))
+    .map(t => `<option value="${t.nom}">${t.nom}</option>`)
+    .join('');
+
+  if (!techOptions) {
+    showNotif('⚠️ Tous les techniciens ont déjà un compte');
+    return;
+  }
+
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-hdr">
+      <div class="modal-title"><i class="ti ti-user-plus" style="color:var(--accent);margin-right:8px"></i>Créer un compte technicien</div>
+      <button class="close-btn" onclick="closeModal()"><i class="ti ti-x" style="color:#f87171"></i></button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Technicien associé</label>
+      <select id="nc-tech"><option value="">— Sélectionner —</option>${techOptions}</select>
+    </div>
+    <div class="fg2">
+      <div class="form-group">
+        <label class="form-label">Identifiant de connexion</label>
+        <input id="nc-login" type="text" placeholder="ex: karim.diallo" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mot de passe</label>
+        <input id="nc-password" type="text" placeholder="min. 6 caractères" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveNewCompte()"><i class="ti ti-user-check" style="color:#4ade80"></i> Créer le compte</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function saveNewCompte() {
+  const techNom  = document.getElementById('nc-tech').value.trim();
+  const login    = document.getElementById('nc-login').value.trim().toLowerCase();
+  const password = document.getElementById('nc-password').value.trim();
+
+  if (!techNom)        { showNotif('⚠️ Sélectionnez un technicien'); return; }
+  if (!login)          { showNotif('⚠️ Identifiant requis'); return; }
+  if (password.length < 6) { showNotif('⚠️ Mot de passe trop court (min. 6 caractères)'); return; }
+
+  const all = getAllUsers();
+  if (all.some(u => u.login === login)) { showNotif('⚠️ Cet identifiant existe déjà'); return; }
+
+  const tech   = techniciens.find(t => t.nom === techNom);
+  const initials = techNom.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  const newUser  = { login, password, nom: techNom, role: 'Technicien', avatar: initials, techNom, base: false };
+
+  const extras = getExtraUsers();
+  extras.push(newUser);
+  saveExtraUsers(extras);
+
+  closeModal();
+  renderComptes();
+  showNotif(`Compte créé : ${login} ✅`);
+}
+
+function deleteCompte(login) {
+  const extras = getExtraUsers().filter(u => u.login !== login);
+  saveExtraUsers(extras);
+  renderComptes();
+  showNotif(`Compte supprimé`);
+}
+
 function renderParametres() {
   const p = getParametres();
   const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
@@ -1356,6 +1446,9 @@ function renderParametres() {
 
   // Statut API et DB
   checkSystemStatus();
+
+  // Gestion comptes (admin seulement)
+  renderComptes();
 }
 
 function saveParametres() {
@@ -1541,15 +1634,25 @@ async function telechargerRapport() {
    AUTHENTIFICATION
    ===================================================== */
 
-const AUTH_KEY  = 'crmtech_auth_v1';
-const AUTH_USERS = [
-  { login: 'admin',   password: 'admin123',  nom: 'Administrateur', role: 'Administrateur', avatar: 'A',  techNom: null },
-  { login: 'manager', password: 'manager1',  nom: 'Manager',        role: 'Manager',        avatar: 'MG', techNom: null },
-  { login: 'karim',   password: 'karim123',  nom: 'Karim Diallo',   role: 'Technicien',     avatar: 'KD', techNom: 'Karim Diallo'  },
-  { login: 'sophie',  password: 'sophie123', nom: 'Sophie Martin',  role: 'Technicien',     avatar: 'SM', techNom: 'Sophie Martin' },
-  { login: 'luc',     password: 'luc123',    nom: 'Luc Bernard',    role: 'Technicien',     avatar: 'LB', techNom: 'Luc Bernard'   },
-  { login: 'amara',   password: 'amara123',  nom: 'Amara Koné',     role: 'Technicien',     avatar: 'AK', techNom: 'Amara Koné'    },
+const AUTH_KEY      = 'crmtech_auth_v1';
+const ACCOUNTS_KEY  = 'crmtech_accounts_v1';
+
+/* Comptes de base non modifiables */
+const BASE_USERS = [
+  { login: 'admin',   password: 'admin123', nom: 'Administrateur', role: 'Administrateur', avatar: 'A',  techNom: null, base: true },
+  { login: 'manager', password: 'manager1', nom: 'Manager',        role: 'Manager',        avatar: 'MG', techNom: null, base: true },
 ];
+
+/* Comptes dynamiques créés par l'admin (stockés en localStorage) */
+function getExtraUsers() {
+  try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || '[]'); } catch(_) { return []; }
+}
+function saveExtraUsers(list) {
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list));
+}
+function getAllUsers() {
+  return [...BASE_USERS, ...getExtraUsers()];
+}
 
 function getSession() {
   try { return JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); } catch(_) { return null; }
@@ -1657,7 +1760,7 @@ async function handleLogin(e) {
   // Simulation délai réseau (UX)
   await new Promise(r => setTimeout(r, 600));
 
-  const user = AUTH_USERS.find(u => u.login === login && u.password === password);
+  const user = getAllUsers().find(u => u.login === login && u.password === password);
 
   if (!user) {
     setLoginLoading(false);
