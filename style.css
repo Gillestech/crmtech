@@ -317,6 +317,24 @@
 }
 .pw-eye-btn:hover { color: var(--text-secondary); }
 
+/* Statut radio (profil technicien) */
+.statut-radio { cursor: pointer; }
+.statut-radio input[type="radio"] { display: none; }
+.statut-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+  border: 1.5px solid transparent;
+  transition: all .15s;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+}
+.statut-chip i { font-size: 14px; }
+.statut-radio input:checked + .statut-disponible  { background: rgba(56,239,125,.12); border-color: #38ef7d; color: #38ef7d; }
+.statut-radio input:checked + .statut-occupe      { background: rgba(255,210,0,.12);  border-color: #ffd200; color: #ffd200; }
+.statut-radio input:checked + .statut-intervention{ background: rgba(255,79,109,.12); border-color: #ff4f6d; color: #ff4f6d; }
+.statut-chip:hover { border-color: var(--accent); color: var(--text-primary); }
+
 :root {
   /* Dark palette */
   --bg-app:        #151823;

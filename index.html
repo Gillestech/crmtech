@@ -421,8 +421,49 @@
       </div>
       <div class="content">
 
+        <!-- Mes informations personnelles (technicien only) -->
+        <div class="card" data-tech id="card-mon-profil">
+          <div class="card-title"><i class="ti ti-user-circle ic-cyan" style="margin-right:8px"></i>Mes informations personnelles</div>
+          <div style="display:flex;align-items:center;gap:16px;margin:12px 0">
+            <div id="mp-photo-wrap" style="position:relative;flex-shrink:0">
+              <div id="mp-photo-preview" style="width:72px;height:72px;border-radius:50%;background:var(--bg-input);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden">
+                <i class="ti ti-user" style="font-size:28px;color:var(--text-muted)"></i>
+              </div>
+              <label for="mp-photo" style="position:absolute;bottom:0;right:0;width:22px;height:22px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.4)">
+                <i class="ti ti-camera" style="font-size:12px;color:#fff"></i>
+              </label>
+              <input type="file" id="mp-photo" accept="image/*" style="display:none" onchange="previewMpPhoto(this)">
+            </div>
+            <div style="flex:1">
+              <div id="mp-nom" style="font-size:16px;font-weight:700;color:var(--text-primary)"></div>
+              <div id="mp-spec-display" style="font-size:12px;color:var(--text-muted);margin-top:2px"></div>
+            </div>
+          </div>
+          <div class="fg2">
+            <div class="form-group">
+              <label class="form-label">Spécialité / Poste</label>
+              <input id="mp-spec" type="text" class="param-input" placeholder="Ex: Technicien réseau">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Téléphone</label>
+              <input id="mp-tel" type="tel" class="param-input" placeholder="+225 07 00 00 00">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Statut de disponibilité</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+              <label class="statut-radio"><input type="radio" name="mp-statut" value="Disponible"><span class="statut-chip statut-disponible"><i class="ti ti-circle-check"></i> Disponible</span></label>
+              <label class="statut-radio"><input type="radio" name="mp-statut" value="Occupé"><span class="statut-chip statut-occupe"><i class="ti ti-clock"></i> Occupé</span></label>
+              <label class="statut-radio"><input type="radio" name="mp-statut" value="En intervention"><span class="statut-chip statut-intervention"><i class="ti ti-tool"></i> En intervention</span></label>
+            </div>
+          </div>
+          <div style="margin-top:14px">
+            <button class="btn btn-primary" onclick="saveMonProfil()"><i class="ti ti-device-floppy" style="color:#4ade80"></i> Enregistrer</button>
+          </div>
+        </div>
+
         <!-- Informations société -->
-        <div class="card">
+        <div class="card" data-admin>
           <div class="card-title"><i class="ti ti-building ic-violet" style="margin-right:8px"></i>Informations de la société</div>
           <div class="fg2">
             <div class="form-group"><label class="form-label">Nom de la société</label><input id="p-societe" type="text" class="param-input" placeholder="Ex: GroupAMK"></div>
@@ -436,7 +477,7 @@
         </div>
 
         <!-- Notifications -->
-        <div class="card">
+        <div class="card" data-admin>
           <div class="card-title"><i class="ti ti-bell ic-amber" style="margin-right:8px"></i>Notifications par email</div>
           <div class="param-row">
             <div>

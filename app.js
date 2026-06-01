@@ -1621,6 +1621,91 @@ function deleteCompte(login) {
   showNotif(`Compte supprimé`);
 }
 
+/* ---- Profil personnel technicien ------------------- */
+function renderMonProfil() {
+  const me = techniciens.find(t => t.nom === myTechNom());
+  if (!me) return;
+
+  // Nom (lecture seule)
+  const nomEl = document.getElementById('mp-nom');
+  if (nomEl) nomEl.textContent = me.nom;
+
+  // Spécialité affichée
+  const specDisp = document.getElementById('mp-spec-display');
+  if (specDisp) specDisp.textContent = me.spec || 'Aucune spécialité renseignée';
+
+  // Photo
+  const preview = document.getElementById('mp-photo-preview');
+  if (preview) {
+    if (me.photo) {
+      preview.innerHTML = `<img src="${me.photo}" style="width:100%;height:100%;object-fit:cover">`;
+    } else {
+      const initials = me.nom.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      preview.innerHTML = `<span style="font-size:22px;font-weight:700;color:var(--accent)">${initials}</span>`;
+    }
+  }
+
+  // Champs éditables
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('mp-spec', me.spec);
+  set('mp-tel',  me.tel);
+
+  // Statut radio
+  document.querySelectorAll('input[name="mp-statut"]').forEach(r => {
+    r.checked = r.value === me.statut;
+  });
+}
+
+function previewMpPhoto(input) {
+  if (!input.files[0]) return;
+  const preview = document.getElementById('mp-photo-preview');
+  const reader  = new FileReader();
+  reader.onload  = e => { preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover">`; };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function saveMonProfil() {
+  const me = techniciens.find(t => t.nom === myTechNom());
+  if (!me) return;
+
+  const spec   = document.getElementById('mp-spec')?.value.trim()  || me.spec;
+  const tel    = document.getElementById('mp-tel')?.value.trim()   || me.tel;
+  const statut = document.querySelector('input[name="mp-statut"]:checked')?.value || me.statut;
+
+  const fd = new FormData();
+  fd.append('nom',        me.nom);
+  fd.append('specialite', spec);
+  fd.append('telephone',  tel);
+  fd.append('statut',     statut);
+  fd.append('_method',    'PUT');
+
+  const photoInput = document.getElementById('mp-photo');
+  if (photoInput?.files[0]) fd.append('photo', photoInput.files[0]);
+
+  fetch(`${API}/techniciens/${me._id}`, { method:'POST', headers:{'Accept':'application/json'}, body:fd })
+    .then(r => r.json())
+    .then(() => {
+      reload(() => {
+        renderMonProfil();
+        // Mettre à jour l'avatar en sidebar
+        const s = getSession();
+        if (s) updateSidebarUser(s);
+      });
+      showNotif('Profil mis à jour ✅');
+    })
+    .catch(() => {
+      // Mode hors-ligne : mise à jour locale uniquement
+      const idx = techniciens.findIndex(t => t.nom === myTechNom());
+      if (idx !== -1) {
+        techniciens[idx].spec   = spec;
+        techniciens[idx].tel    = tel;
+        techniciens[idx].statut = statut;
+        renderMonProfil();
+      }
+      showNotif('Profil mis à jour (mode local) ✅');
+    });
+}
+
 function renderParametres() {
   const p = getParametres();
   const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
@@ -1648,6 +1733,9 @@ function renderParametres() {
 
   // Gestion comptes (admin seulement)
   renderComptes();
+
+  // Profil personnel (technicien seulement)
+  if (isTech()) renderMonProfil();
 }
 
 function changePassword() {
@@ -1920,11 +2008,15 @@ function visibleTechniciens()   { return isTech() ? techniciens.filter(t  => t.n
 
 function applyRoleUI() {
   const tech = isTech();
-  // Masquer items admin dans la sidebar
+  // Éléments visibles admin seulement
   document.querySelectorAll('[data-admin]').forEach(el => {
     el.style.display = tech ? 'none' : '';
   });
-  // Masquer boutons de création dans les topbars
+  // Éléments visibles technicien seulement
+  document.querySelectorAll('[data-tech]').forEach(el => {
+    el.style.display = tech ? '' : 'none';
+  });
+  // Boutons d'action admin dans les topbars
   document.querySelectorAll('.admin-action').forEach(el => {
     el.style.display = tech ? 'none' : '';
   });
@@ -1932,7 +2024,7 @@ function applyRoleUI() {
   const roleEl = document.getElementById('sidebar-user-role');
   const s = getSession();
   if (roleEl && s) roleEl.textContent = s.role;
-  // Si technicien sur une page interdite, rediriger
+  // Si technicien sur une page interdite, rediriger vers dashboard
   if (tech) {
     const forbidden = ['contrats','clients','statistiques','export'];
     const cur = localStorage.getItem('crmtech_page') || 'dashboard';
