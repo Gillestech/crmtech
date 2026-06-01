@@ -601,10 +601,10 @@ function renderDepannages() {
       <td class="muted">${d.date}</td>
       <td style="font-weight:600;color:var(--green);font-size:11.5px">${d.montant ? d.montant+' FCFA' : '<span class="muted">—</span>'}</td>
       <td><div class="rf">
-        ${!tech
-          ? `<button class="btn btn-sm" onclick="editDepannage(${d._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>
+        ${tech
+          ? `<button class="btn btn-sm" onclick="resolveDepannage(${d._id})" title="Marquer terminé" ${d.statut==='Résolu'?'disabled':''}><i class="ti ti-circle-check ic-action-resolve"></i></button>`
+          : `<button class="btn btn-sm" onclick="editDepannage(${d._id})" title="Modifier"><i class="ti ti-pencil ic-action-edit"></i></button>
              <button class="btn btn-sm btn-danger" onclick="deleteDepannage(${d._id})" title="Supprimer"><i class="ti ti-trash-x" style="color:#f87171"></i></button>`
-          : `<span style="font-size:10px;color:var(--text-muted)">Lecture seule</span>`
         }
       </div></td>
     </tr>`).join('');
