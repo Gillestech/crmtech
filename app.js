@@ -164,8 +164,57 @@ function restoreNav() {
 }
 
 /* ---- Dashboard ------------------------------------ */
+/* Convertit "28/05" ou "28/05/2026" → { day, month (1-based) } */
+function parseShortDate(s) {
+  if (!s || !s.includes('/')) return null;
+  const parts = s.split('/');
+  return { day: parseInt(parts[0]), month: parseInt(parts[1]) };
+}
+
+/* Retourne le jour du mois si la date correspond au mois/année courant, sinon null */
+function matchCalDay(shortDate, month0, year) {
+  const p = parseShortDate(shortDate);
+  if (!p) return null;
+  // Pour les dates avec année (installation debut/fin) : "DD/MM/YYYY"
+  const parts = shortDate.split('/');
+  if (parts.length === 3 && parseInt(parts[2]) !== year) return null;
+  return p.month === month0 + 1 ? p.day : null;
+}
+
 function renderDash() {
-  document.getElementById('dash-tickets').innerHTML = visibleTickets().slice(0,5).map(t => `
+  const tech   = isTech();
+  const myName = myTechNom();
+  const vt     = visibleTickets();
+  const vd     = visibleDepannages();
+  const vi     = visibleInstallations();
+
+  /* --- Métriques --- */
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+  if (tech) {
+    const actifs   = vt.filter(t => t.statut !== 'Résolu' && t.statut !== 'Annulé').length;
+    const resolus  = vt.filter(t => t.statut === 'Résolu').length;
+    const depActif = vd.filter(d => d.statut === 'En cours').length;
+    const instActif= vi.filter(i => i.statut === 'En cours' || i.statut === 'Planifié').length;
+    set('dm-label-1','Mes tickets actifs');   set('dm-val-1', actifs);   set('dm-sub-1', `${resolus} résolus`);
+    set('dm-label-2','Mes dépannages');       set('dm-val-2', depActif); set('dm-sub-2', `${vd.filter(d=>d.prio==='Urgent').length} urgents`);
+    set('dm-label-3','Mes installations');    set('dm-val-3', instActif);set('dm-sub-3', `${vi.filter(i=>i.avancement===100).length} terminées`);
+    set('dm-label-4','Tickets résolus');      set('dm-val-4', resolus);  set('dm-sub-4', 'total cumulé');
+  } else {
+    const ouverts   = tickets.filter(t => t.statut !== 'Résolu' && t.statut !== 'Annulé').length;
+    const depActifs = depannages.filter(d => d.statut === 'En cours').length;
+    const contActif = contrats.filter(c => c.statut === 'Actif').length;
+    const urgents   = depannages.filter(d => d.prio === 'Urgent').length;
+    set('dm-label-1','Tickets ouverts');  set('dm-val-1', ouverts);   set('dm-sub-1', `▲ ${tickets.filter(t=>t.statut==='Ouvert').length} non assignés`);
+    set('dm-label-2','Dépannages actifs');set('dm-val-2', depActifs); set('dm-sub-2', `${urgents} urgent${urgents>1?'s':''}`);
+    set('dm-label-3','Contrats actifs');  set('dm-val-3', contActif); set('dm-sub-3', `${contrats.filter(c=>c.fin&&c.fin.includes('2026')).length} expirent en 2026`);
+    set('dm-label-4','Délai moyen');      set('dm-val-4', '2.4h');    set('dm-sub-4', 'Objectif : <3h ✓');
+  }
+
+  /* --- Tickets récents --- */
+  const ticketTitle = document.getElementById('dash-tickets-title');
+  if (ticketTitle) ticketTitle.textContent = tech ? 'Mes tickets' : 'Tickets récents';
+  document.getElementById('dash-tickets').innerHTML = vt.slice(0,5).map(t => `
     <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
       <div style="flex:1;min-width:0">
         <div style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.sujet}</div>
@@ -175,66 +224,166 @@ function renderDash() {
         ${statBadge(t.statut)}
         <span style="font-size:10px;font-family:var(--font-mono);color:var(--text-muted)">${t.id}</span>
       </div>
-    </div>`).join('');
+    </div>`).join('') || '<div style="color:var(--text-muted);font-size:12px;padding:12px 0">Aucun ticket</div>';
 
-  const agenda = [
-    { h:'09:00', t:'Visite maintenance — DataSoft SA', tech:'Karim Diallo'  },
-    { h:'11:30', t:'Install NAS — DataSoft SA',        tech:'Karim Diallo'  },
-    { h:'14:00', t:'Config VPN — Énergie Plus',        tech:'Sophie Martin' },
-  ];
-  document.getElementById('dash-agenda').innerHTML = agenda.map(a => `
+  /* --- Agenda du jour (interventions en cours / à venir) --- */
+  const agendaTitle = document.getElementById('dash-agenda-title');
+  if (agendaTitle) agendaTitle.textContent = tech ? 'Mes interventions' : 'Interventions du jour';
+
+  const agendaItems = [];
+  vt.filter(t => t.statut === 'En cours' || t.statut === 'Ouvert').forEach(t => {
+    agendaItems.push({ label: t.sujet, detail: t.client, badge: prioBadge(t.prio), type:'ticket' });
+  });
+  vd.filter(d => d.statut === 'En cours').forEach(d => {
+    agendaItems.push({ label: d.desc, detail: d.client + ' — ' + d.equip, badge: prioBadge(d.prio), type:'dep' });
+  });
+  vi.filter(i => i.statut === 'En cours').forEach(i => {
+    agendaItems.push({ label: i.titre, detail: i.client + ' · ' + i.avancement + '%', badge: statBadge(i.statut), type:'inst' });
+  });
+
+  document.getElementById('dash-agenda').innerHTML = agendaItems.slice(0,4).map(a => `
     <div class="agenda-item">
-      <div class="agenda-hour">${a.h}</div>
-      <div><div class="agenda-title">${a.t}</div><div class="agenda-tech">${a.tech}</div></div>
-    </div>`).join('');
-
-  document.getElementById('dash-techload').innerHTML = techniciens.map((t,i) => {
-    const pct = Math.round((t.actifs / 6) * 100);
-    const grad = pct > 80 ? 'linear-gradient(90deg,#ff4f6d,#b91d73)'
-               : pct > 60 ? 'linear-gradient(90deg,#ffd200,#f7971e)'
-               :             'linear-gradient(90deg,#6a5af9,#3b82f6)';
-    return `<div class="tech-load-item">
-      <div class="avatar ${AVS[i%5]}">${fn(t.nom)}</div>
-      <div class="tech-load-name">${t.nom}</div>
-      <div class="tech-load-bar"><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${grad}"></div></div></div>
-      <span class="tech-load-cnt">${t.actifs} tickets</span>
-    </div>`;
-  }).join('');
-
-  document.getElementById('dash-contrats').innerHTML = contrats.filter(c=>c.statut==='Actif').slice(0,3).map(c => `
-    <div style="padding:8px 0;border-bottom:1px solid var(--border)">
-      <div class="rf" style="justify-content:space-between">
-        <span style="font-size:12.5px;font-weight:600">${c.client}</span>
-        ${c.fin.includes('2026') ? '<span class="badge b-amber">Expire 2026</span>' : '<span class="badge b-green">Actif</span>'}
+      <div class="agenda-dot agenda-dot-${a.type}"></div>
+      <div style="flex:1;min-width:0">
+        <div class="agenda-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.label}</div>
+        <div class="agenda-tech">${a.detail}</div>
       </div>
-      <div style="font-size:11px;color:var(--text-secondary);margin-top:3px">${c.type} · Prochaine : ${c.next}</div>
-    </div>`).join('');
+      ${a.badge}
+    </div>`).join('') || '<div style="color:var(--text-muted);font-size:12px;padding:12px 0">Aucune intervention en cours</div>';
+
+  /* --- Colonne 3 : charge techniciens OU mon activité --- */
+  const col3title = document.getElementById('dash-col3-title');
+  if (tech) {
+    if (col3title) col3title.textContent = 'Mon activité';
+    const me = techniciens.find(t => t.nom === myName);
+    if (me) {
+      const pct  = Math.round((me.actifs / Math.max(me.actifs + me.resolus, 1)) * 100);
+      const grad = 'linear-gradient(90deg,#6a5af9,#3b82f6)';
+      document.getElementById('dash-techload').innerHTML = `
+        <div style="padding:8px 0">
+          <div class="rf" style="justify-content:space-between;margin-bottom:10px">
+            <span style="font-weight:600">${me.nom}</span>
+            <span class="badge ${me.statut==='Disponible'?'b-green':me.statut==='Occupé'?'b-amber':'b-red'}">${me.statut}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+            <div style="background:var(--bg-input);border-radius:8px;padding:10px;text-align:center">
+              <div style="font-size:22px;font-weight:700;color:var(--accent)">${me.actifs}</div>
+              <div style="font-size:11px;color:var(--text-muted)">tickets actifs</div>
+            </div>
+            <div style="background:var(--bg-input);border-radius:8px;padding:10px;text-align:center">
+              <div style="font-size:22px;font-weight:700;color:#38ef7d">${me.resolus}</div>
+              <div style="font-size:11px;color:var(--text-muted)">résolus</div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Spécialité : ${me.spec||'—'}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Disponibilité</div>
+          <div class="prog-bar"><div class="prog-fill" style="width:${me.dispo}%;background:${grad}"></div></div>
+          <div style="font-size:11px;color:var(--text-muted);text-align:right;margin-top:4px">${me.dispo}%</div>
+        </div>`;
+    }
+  } else {
+    if (col3title) col3title.textContent = 'Charge techniciens';
+    document.getElementById('dash-techload').innerHTML = techniciens.map((t,i) => {
+      const pct = Math.round((t.actifs / 6) * 100);
+      const grad = pct > 80 ? 'linear-gradient(90deg,#ff4f6d,#b91d73)'
+                 : pct > 60 ? 'linear-gradient(90deg,#ffd200,#f7971e)'
+                 :             'linear-gradient(90deg,#6a5af9,#3b82f6)';
+      return `<div class="tech-load-item">
+        <div class="avatar ${AVS[i%5]}">${fn(t.nom)}</div>
+        <div class="tech-load-name">${t.nom}</div>
+        <div class="tech-load-bar"><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${grad}"></div></div></div>
+        <span class="tech-load-cnt">${t.actifs} tickets</span>
+      </div>`;
+    }).join('');
+  }
+
+  /* --- Colonne 4 : contrats OU mes installations --- */
+  const col4title = document.getElementById('dash-col4-title');
+  if (tech) {
+    if (col4title) col4title.textContent = 'Mes installations';
+    document.getElementById('dash-contrats').innerHTML = vi.slice(0,3).map(i => `
+      <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div class="rf" style="justify-content:space-between">
+          <span style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${i.titre}</span>
+          ${statBadge(i.statut)}
+        </div>
+        <div style="font-size:11px;color:var(--text-secondary);margin:4px 0 6px">${i.client}</div>
+        <div class="prog-bar" style="height:5px"><div class="prog-fill" style="width:${i.avancement}%"></div></div>
+        <div style="font-size:10px;color:var(--text-muted);text-align:right;margin-top:3px">${i.avancement}%</div>
+      </div>`).join('') || '<div style="color:var(--text-muted);font-size:12px;padding:12px 0">Aucune installation</div>';
+  } else {
+    if (col4title) col4title.textContent = 'Contrats expirant bientôt';
+    document.getElementById('dash-contrats').innerHTML = contrats.filter(c=>c.statut==='Actif').slice(0,3).map(c => `
+      <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div class="rf" style="justify-content:space-between">
+          <span style="font-size:12.5px;font-weight:600">${c.client}</span>
+          ${c.fin.includes('2026') ? '<span class="badge b-amber">Expire 2026</span>' : '<span class="badge b-green">Actif</span>'}
+        </div>
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:3px">${c.type} · Prochaine : ${c.next}</div>
+      </div>`).join('');
+  }
 }
 
 /* ---- Calendrier ----------------------------------- */
+
+/* Construit les événements dynamiques depuis les données réelles */
+function buildCalEvents(month0, year) {
+  const evs = {}; // { day: [{type, title}] }
+  const add  = (day, type, title) => {
+    if (!day || day < 1) return;
+    if (!evs[day]) evs[day] = [];
+    evs[day].push({ type, title });
+  };
+
+  // Tickets → date_prevue = isoToShort → "DD/MM"
+  visibleTickets().forEach(t => {
+    const d = matchCalDay(t.date, month0, year);
+    if (d) add(d, 'ticket', t.sujet + ' — ' + t.client);
+  });
+
+  // Dépannages → date_intervention = isoToShort → "DD/MM"
+  visibleDepannages().forEach(d => {
+    const day = matchCalDay(d.date, month0, year);
+    if (day) add(day, 'dep', d.desc + ' — ' + d.client);
+  });
+
+  // Installations → date_debut = isoToFr → "DD/MM/YYYY"
+  visibleInstallations().forEach(i => {
+    const day = matchCalDay(i.debut, month0, year);
+    if (day) add(day, 'inst', i.titre + ' — ' + i.client);
+  });
+
+  return evs;
+}
+
 function renderCalendar() {
+  const today = new Date();
   document.getElementById('cal-month-title').textContent = MONTHS[currentMonth] + ' ' + currentYear;
   document.getElementById('cal-names').innerHTML = DAYS.map(d => `<div class="cal-day-name">${d}</div>`).join('');
-  const first = new Date(currentYear, currentMonth, 1).getDay();
-  const offset = (first === 0 ? 6 : first - 1);
-  const total  = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const prevTotal = new Date(currentYear, currentMonth, 0).getDate();
+
+  const first    = new Date(currentYear, currentMonth, 1).getDay();
+  const offset   = (first === 0 ? 6 : first - 1);
+  const total    = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const prevTotal= new Date(currentYear, currentMonth, 0).getDate();
+  const dynEvs   = buildCalEvents(currentMonth, currentYear);
+
   let cells = '';
   for (let i = 0; i < offset; i++)
     cells += `<div class="cal-cell other-month"><div class="cal-num">${prevTotal - offset + i + 1}</div></div>`;
+
   for (let d = 1; d <= total; d++) {
-    const isToday = d === 28 && currentMonth === 4 && currentYear === 2026;
-    const evs = calEvents.filter(e => e.day === d && !e.next);
+    const isToday = d === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
+    const evList  = dynEvs[d] || [];
     cells += `<div class="cal-cell${isToday ? ' today' : ''}">
       <div class="cal-num">${d}</div>
-      ${evs.map(e => `<div class="cal-event ${e.type}" title="${e.title}">${e.title.split(' — ')[0]}</div>`).join('')}
+      ${evList.map(e => `<div class="cal-event ${e.type}" title="${e.title}">${e.title.split(' — ')[0]}</div>`).join('')}
     </div>`;
   }
+
   const rem = (7 - ((offset + total) % 7)) % 7;
-  for (let i = 1; i <= rem; i++) {
-    const nextEvs = calEvents.filter(e => e.day === i && e.next);
-    cells += `<div class="cal-cell other-month"><div class="cal-num">${i}</div>${nextEvs.map(e=>`<div class="cal-event ${e.type}">${e.title.split(' — ')[0]}</div>`).join('')}</div>`;
-  }
+  for (let i = 1; i <= rem; i++)
+    cells += `<div class="cal-cell other-month"><div class="cal-num">${i}</div></div>`;
+
   document.getElementById('cal-body').innerHTML = cells;
 }
 function changeMonth(d) {

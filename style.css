@@ -949,11 +949,15 @@ select option { background: var(--bg-card); }
 .inst-progress-hdr span:last-child { font-weight: 700; color: var(--text-primary); }
 
 /* ---- Dashboard agenda ----------------------------- */
-.agenda-item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.agenda-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .agenda-item:last-child { border-bottom: none; }
 .agenda-hour  { font-size: 11.5px; font-weight: 700; color: var(--accent); min-width: 44px; }
 .agenda-title { font-size: 12.5px; font-weight: 600; }
 .agenda-tech  { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.agenda-dot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.agenda-dot-ticket { background: #6a5af9; }
+.agenda-dot-dep    { background: #ff4f6d; }
+.agenda-dot-inst   { background: #38ef7d; }
 
 /* ---- Tech load ------------------------------------ */
 .tech-load-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
